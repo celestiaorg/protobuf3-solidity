@@ -1,21 +1,25 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 
-	plugin "google.golang.org/protobuf/types/pluginpb"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func main() {
-	req := &plugin.CodeGeneratorRequest{}
-	resp := &plugin.CodeGeneratorResponse{}
+	request := &pluginpb.CodeGeneratorRequest{}
 
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(data)
+	err = proto.Unmarshal(data, request)
+	if err != nil {
+		panic(err)
+	}
+
+	println(request.String())
 }
