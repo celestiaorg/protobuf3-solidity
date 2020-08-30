@@ -18,6 +18,8 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 }
 
 // Generate ...
-func (g *Generator) Generate() {
+func (g *Generator) Generate() (*pluginpb.CodeGeneratorResponse, error) {
+	println(g.request.String())
 
+	return nil, nil
 }

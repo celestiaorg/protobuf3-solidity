@@ -10,18 +10,37 @@ import (
 )
 
 func main() {
-	request := &pluginpb.CodeGeneratorRequest{}
-
+	// Read marshaled request from stdin
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		panic(err)
 	}
 
+	// Initialize request object
+	request := &pluginpb.CodeGeneratorRequest{}
 	err = proto.Unmarshal(data, request)
 	if err != nil {
 		panic(err)
 	}
 
+	// Initialize generator with request
 	g := generator.New(request)
-	g.Generate()
+
+	// Generate response (i.e. generate code)
+	response, err := g.Generate()
+	if err != nil {
+		panic(err)
+	}
+
+	// Marshal response for output
+	data, err = proto.Marshal(response)
+	if err != nil {
+		panic(err)
+	}
+
+	// Write response to stdout
+	_, err = os.Stdout.Write(data)
+	if err != nil {
+		panic(err)
+	}
 }
