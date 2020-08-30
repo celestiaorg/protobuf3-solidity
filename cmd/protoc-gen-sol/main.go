@@ -23,5 +23,5 @@ func main() {
 	}
 
 	g := generator.New(request)
-	g.Run()
+	g.Generate()
 }

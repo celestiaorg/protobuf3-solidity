@@ -17,7 +17,7 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 	return g
 }
 
-// Run ...
-func (g *Generator) Run() {
+// Generate ...
+func (g *Generator) Generate() {
 
 }
