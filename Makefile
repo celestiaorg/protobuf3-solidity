@@ -1,11 +1,14 @@
 GO = env GO111MODULE=on go
 GOBUILD = $(GO) build
 GOTEST = $(GO) test
-BIN_NAME = protoc-gen-sol
 BIN_DIR = bin
+
+TARGETS := protoc-gen-sol
 
 all: build
 
-build:
+build: $(TARGETS)
+
+$(TARGETS):
 	mkdir -p $(BIN_DIR)
-	$(GOBUILD) -o $(BIN_DIR)/$(BIN_NAME) -v
+	$(GOBUILD) -v -o $(BIN_DIR)/ ./cmd/$@
