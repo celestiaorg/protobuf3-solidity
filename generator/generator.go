@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
@@ -21,10 +20,8 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 }
 
 // Generate generates Solidity code from the requested .proto files.
-func (g *Generator) Generate() (*pluginpb.CodeGeneratorResponse, error) {
-	println(proto.MarshalTextString(g.request))
-
-	// println(g.request.GetFileToGenerate()[0])
+func (g *Generator) Generate() (*pluginpb.CodeGeneratorResponse_File, error) {
+	println(g.request.GetFileToGenerate()[0])
 
 	return nil, nil
 }
