@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/lazyledger/protobuf3-solidity/generator"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
 )
@@ -21,5 +22,6 @@ func main() {
 		panic(err)
 	}
 
-	println(request.String())
+	g := generator.New(request)
+	g.Run()
 }
