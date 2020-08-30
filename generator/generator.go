@@ -2,6 +2,9 @@ package generator
 
 import "google.golang.org/protobuf/types/pluginpb"
 
+// SolidityVersionString is the Solidity version specifier.
+const SolidityVersionString = ">=0.6.0 <8.0.0"
+
 // Generator generates Solidity code from a .proto file.
 type Generator struct {
 	request *pluginpb.CodeGeneratorRequest
@@ -15,6 +18,6 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 }
 
 // Run ...
-func (*Generator) Run() {
+func (g *Generator) Run() {
 
 }
