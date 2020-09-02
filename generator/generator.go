@@ -83,9 +83,25 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	}
 
 	b.P(fmt.Sprintf("struct %s {", structName))
+	b.Indent()
 
 	// TODO loop over fields
+	fields := descriptor.GetField()
+	for _, field := range fields {
+		fieldType, err := typeToSol(field.GetType())
+		if err != nil {
+			return err
+		}
+		fieldName := field.GetName()
+		err = checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
 
+		b.P(fmt.Sprintf("%s %s;", fieldType, fieldName))
+	}
+
+	b.Unindent()
 	b.P("}")
 	b.P()
 
@@ -137,4 +153,50 @@ func checkKeyword(w string) error {
 	}
 
 	return nil
+}
+
+func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
+	s := ""
+
+	switch fType {
+	case descriptorpb.FieldDescriptorProto_TYPE_INT32:
+		s = "int32"
+	case descriptorpb.FieldDescriptorProto_TYPE_INT64:
+		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
+		s = "uint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
+		s = "uint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
+		s = "int32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
+		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
+		s = "uint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
+		s = "uint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+		s = "int32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		s = "bool"
+	case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+		s = "string"
+	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		s = "bytes"
+	case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+		return "", errors.New("Unsupported field type " + fType.String())
+	case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+		return "", errors.New("Unsupported field type " + fType.String())
+	default:
+		return "", errors.New("Unsupported field type " + fType.String())
+	}
+
+	err := checkKeyword(s)
+	if err != nil {
+		return s, err
+	}
+
+	return s, nil
 }
