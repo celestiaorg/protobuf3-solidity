@@ -74,10 +74,6 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 }
 
 func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffer) error {
-	println(descriptor.GetName())
-	// println(descriptor.GetField()[0].String())
-
-	// TODO generate header, imports, and struct definition
 	structName := descriptor.GetName()
 	err := checkKeyword(structName)
 	if err != nil {
@@ -87,9 +83,10 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P(fmt.Sprintf("struct %s {", structName))
 	b.Indent()
 
-	// TODO loop over fields
+	// Loop over fields
 	fields := descriptor.GetField()
 	for _, field := range fields {
+		// Convert protobuf field type to Solidity native type
 		fieldType, err := typeToSol(field.GetType())
 		if err != nil {
 			return err
