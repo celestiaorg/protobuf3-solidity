@@ -22,12 +22,22 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 }
 
 // Generate generates Solidity code from the requested .proto files.
-func (g *Generator) Generate() (*pluginpb.CodeGeneratorResponse_File, error) {
-	err := checkSyntaxVersion(g.request.GetProtoFile()[0].GetSyntax())
+func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
+	for i := 0; i < len(g.request.GetProtoFile()); i++ {
+		_, err := g.generateFile(i)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
+}
+
+func (g *Generator) generateFile(fileIndex int) (*pluginpb.CodeGeneratorResponse_File, error) {
+	err := checkSyntaxVersion(g.request.GetProtoFile()[fileIndex].GetSyntax())
 	if err != nil {
 		return nil, err
 	}
-
 	return nil, nil
 }
 
