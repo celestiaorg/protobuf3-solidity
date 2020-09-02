@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package Package;
+
+enum OtherEnum {
+  UNSPECIFIED = 0;
+  ONE = 1;
+  TWO = 2;
+};
+
+message OtherMessage {}
+
+message Message {
+  enum EmbeddedEnum {
+    EMBEDDED_UNSPECIFIED = 0;
+    EMBEDDED_ONE = 1;
+    EMBEDDED_TWO = 2;
+  };
+
+  message EmbeddedMessage {}
+
+  int32 optional_int32 = 1;
+  int64 optional_int64 = 2;
+  uint32 optional_uint32 = 3;
+  uint64 optional_uint64 = 4;
+  sint32 optional_sint32 = 5;
+  sint64 optional_sint64 = 6;
+  fixed32 optional_fixed32 = 7;
+  fixed64 optional_fixed64 = 8;
+  sfixed32 optional_sfixed32 = 9;
+  sfixed64 optional_sfixed64 = 10;
+  string optional_bool = 11;
+  string optional_string = 12;
+  bytes optional_bytes = 13;
+  OtherEnum optional_enum = 14;
+  OtherMessage optional_message = 15;
+  EmbeddedEnum optional_other_enum = 16;
+  EmbeddedMessage optional_other_message = 17;
+
+  repeated int32 repeated_int32 = 18;
+  repeated int64 repeated_int64 = 19;
+  repeated uint32 repeated_uint32 = 20;
+  repeated uint64 repeated_uint64 = 21;
+  repeated sint32 repeated_sint32 = 22;
+  repeated sint64 repeated_sint64 = 23;
+  repeated fixed32 repeated_fixed32 = 24;
+  repeated fixed64 repeated_fixed64 = 25;
+  repeated sfixed32 repeated_sfixed32 = 26;
+  repeated sfixed64 repeated_sfixed64 = 27;
+  repeated string repeated_bool = 28;
+  repeated string repeated_string = 29;
+  repeated bytes repeated_bytes = 30;
+  repeated OtherEnum repeated_enum = 31;
+  repeated OtherMessage repeated_message = 32;
+  repeated EmbeddedEnum repeated_other_enum = 33;
+  repeated EmbeddedMessage repeated_other_message = 34;
+}
