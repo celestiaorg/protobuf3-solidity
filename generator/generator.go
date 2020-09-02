@@ -10,6 +10,7 @@ import (
 
 // SolidityVersionString is the Solidity version specifier.
 const SolidityVersionString = ">=0.6.0 <8.0.0"
+const SolidityABIString = "pragma experimental ABIEncoderV2;"
 
 // Generator generates Solidity code from .proto files.
 type Generator struct {
@@ -53,7 +54,8 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 
 	// TODO option for license
 	b.P(fmt.Sprintf("// SPDX-License-Identifier: %s", "CC0"))
-	b.P(SolidityVersionString)
+	b.P("pragma solidity " + SolidityVersionString + ";")
+	b.P(SolidityABIString)
 	b.P()
 	b.P("import \"@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol\";")
 	b.P()
