@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package Package;
+
+message Message {
+  int32 optional_int32 = 1;
+  int64 optional_int64 = 2;
+  uint32 optional_uint32 = 3;
+  uint64 optional_uint64 = 4;
+  sint32 optional_sint32 = 5;
+  sint64 optional_sint64 = 6;
+  fixed32 optional_fixed32 = 7;
+  fixed64 optional_fixed64 = 8;
+  sfixed32 optional_sfixed32 = 9;
+  sfixed64 optional_sfixed64 = 10;
+  string optional_bool = 11;
+  string optional_string = 12;
+  bytes optional_bytes = 13;
+
+  repeated int32 repeated_int32 = 14;
+  repeated int64 repeated_int64 = 15;
+  repeated uint32 repeated_uint32 = 16;
+  repeated uint64 repeated_uint64 = 17;
+  repeated sint32 repeated_sint32 = 18;
+  repeated sint64 repeated_sint64 = 19;
+  repeated fixed32 repeated_fixed32 = 20;
+  repeated fixed64 repeated_fixed64 = 21;
+  repeated sfixed32 repeated_sfixed32 = 22;
+  repeated sfixed64 repeated_sfixed64 = 23;
+  repeated string repeated_bool = 24;
+  repeated string repeated_string = 25;
+  repeated bytes repeated_bytes = 26;
+}
