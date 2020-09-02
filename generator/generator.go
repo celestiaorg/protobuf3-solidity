@@ -33,6 +33,7 @@ func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
 	return nil, nil
 }
 
+// generateFile generates Solidity code from a single .proto file.
 func (g *Generator) generateFile(fileIndex int) (*pluginpb.CodeGeneratorResponse_File, error) {
 	err := checkSyntaxVersion(g.request.GetProtoFile()[fileIndex].GetSyntax())
 	if err != nil {
