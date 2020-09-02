@@ -48,18 +48,23 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 
 	responseFile := &pluginpb.CodeGeneratorResponse_File{}
 
+	b := &WriteableBuffer{}
+
 	for i := 0; i < len(protoFile.GetMessageType()); i++ {
-		err := generateMessage(protoFile.GetMessageType()[i], responseFile)
+		err := generateMessage(protoFile.GetMessageType()[i], b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	// TODO add b to response
+
 	return responseFile, nil
 }
 
-func generateMessage(descriptor *descriptorpb.DescriptorProto, responseFile *pluginpb.CodeGeneratorResponse_File) error {
+func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffer) error {
 	println(descriptor.GetName())
+	// println(descriptor.GetField()[0].String())
 
 	return nil
 }
