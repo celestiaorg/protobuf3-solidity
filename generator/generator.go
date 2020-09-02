@@ -24,14 +24,19 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 
 // Generate generates Solidity code from the requested .proto files.
 func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
-	for i := 0; i < len(g.request.GetProtoFile()); i++ {
-		_, err := generateFile(g.request.GetProtoFile()[i])
+	protoFiles := g.request.GetProtoFile()
+	responseFiles := make([]*pluginpb.CodeGeneratorResponse_File, len(protoFiles))
+
+	for i := 0; i < len(protoFiles); i++ {
+		responseFile, err := generateFile(protoFiles[i])
 		if err != nil {
 			return nil, err
 		}
+
+		responseFiles[i] = responseFile
 	}
 
-	return nil, nil
+	return responseFiles, nil
 }
 
 // generateFile generates Solidity code from a single .proto file.
@@ -50,7 +55,7 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 		}
 	}
 
-	return nil, nil
+	return responseFile, nil
 }
 
 func generateMessage(descriptor *descriptorpb.DescriptorProto, responseFile *pluginpb.CodeGeneratorResponse_File) error {
