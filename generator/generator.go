@@ -116,7 +116,12 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				return err
 			}
 
-			b.P(fmt.Sprintf("%s %s;", fieldType, fieldName))
+			arrayStr := ""
+			if isRepeated(field.GetLabel()) {
+				arrayStr = "[]"
+			}
+
+			b.P(fmt.Sprintf("%s%s %s;", fieldType, arrayStr, fieldName))
 		}
 	}
 
@@ -165,6 +170,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		if err != nil {
 			return err
 		}
+		fieldNumber := field.GetNumber()
 
 		// switch fieldDescriptorType {
 		// case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
@@ -203,6 +209,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 		_ = fieldName
 		_ = fieldType
+		_ = fieldNumber
 	}
 
 	b.Unindent()
@@ -316,4 +323,8 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 	}
 
 	return s, nil
+}
+
+func isRepeated(label descriptorpb.FieldDescriptorProto_Label) bool {
+	return label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 }
