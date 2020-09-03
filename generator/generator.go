@@ -10,6 +10,8 @@ import (
 
 // SolidityVersionString is the Solidity version specifier.
 const SolidityVersionString = ">=0.6.0 <8.0.0"
+
+// SolidityABIString indicates ABIEncoderV2 use.
 const SolidityABIString = "pragma experimental ABIEncoderV2;"
 
 // Generator generates Solidity code from .proto files.
@@ -150,6 +152,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P("// Current position in the buffer")
 	b.P("uint256 pos;")
 	b.P()
+
 	b.P("while (pos < buf.length) {")
 	b.Indent()
 	b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
@@ -159,6 +162,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.Unindent()
 	b.P("}")
 	b.P()
+
 	b.P("// Check that the field number is bounded")
 	b.P(fmt.Sprintf("if (field_number > %d) {", fieldCount))
 	b.Indent()
@@ -166,6 +170,9 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.Unindent()
 	b.P("}")
 	b.P()
+
+	b.Unindent()
+	b.P("}")
 
 	for _, field := range fields {
 		fieldName := field.GetName()
@@ -176,48 +183,133 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		}
 		fieldNumber := field.GetNumber()
 
-		// switch fieldDescriptorType {
-		// case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_INT32:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_INT64:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// default:
-		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		// }
+		b.P()
+		b.P(fmt.Sprintf("function decode_%d(uint256 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint256) {", fieldNumber, structName))
+		b.Indent()
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_INT32:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_INT64:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+			b.P(fmt.Sprintf("(bool success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+			b.P(fmt.Sprintf("(bool success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+		case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		default:
+			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		}
 
 		_ = fieldName
 		_ = fieldType
 		_ = fieldNumber
-	}
 
-	b.Unindent()
-	b.P("}")
+		b.P()
+		b.P("return (true, pos);")
+
+		b.Unindent()
+		b.P("}")
+	}
 
 	b.Unindent()
 	b.P("}")
