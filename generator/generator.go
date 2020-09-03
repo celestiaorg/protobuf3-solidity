@@ -86,18 +86,26 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	// Loop over fields
 	fields := descriptor.GetField()
 	for _, field := range fields {
-		// Convert protobuf field type to Solidity native type
-		fieldType, err := typeToSol(field.GetType())
-		if err != nil {
-			return err
-		}
-		fieldName := field.GetName()
-		err = checkKeyword(fieldName)
-		if err != nil {
-			return err
-		}
+		fieldDescriptorType := field.GetType()
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		default:
+			// Convert protobuf field type to Solidity native type
+			fieldType, err := typeToSol(fieldDescriptorType)
+			if err != nil {
+				return err
+			}
+			fieldName := field.GetName()
+			err = checkKeyword(fieldName)
+			if err != nil {
+				return err
+			}
 
-		b.P(fmt.Sprintf("%s %s;", fieldType, fieldName))
+			b.P(fmt.Sprintf("%s %s;", fieldType, fieldName))
+		}
 	}
 
 	b.Unindent()
@@ -184,10 +192,6 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 		s = "string"
 	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 		s = "bytes"
-	case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-		return "", errors.New("Unsupported field type " + fType.String())
-	case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-		return "", errors.New("Unsupported field type " + fType.String())
 	default:
 		return "", errors.New("Unsupported field type " + fType.String())
 	}
