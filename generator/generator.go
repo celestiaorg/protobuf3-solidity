@@ -119,6 +119,10 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			arrayStr := ""
 			if isRepeated(field.GetLabel()) {
 				arrayStr = "[]"
+				if !field.GetOptions().GetPacked() {
+					// TODO repeated is false for primitive numeric, why?
+					// return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+				}
 			}
 
 			b.P(fmt.Sprintf("%s%s %s;", fieldType, arrayStr, fieldName))
