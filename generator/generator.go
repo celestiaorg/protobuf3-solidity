@@ -80,11 +80,16 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		return err
 	}
 
+	fields := descriptor.GetField()
+
+	////////////////////////////////////
+	// Generate struct
+	////////////////////////////////////
+
 	b.P(fmt.Sprintf("struct %s {", structName))
 	b.Indent()
 
 	// Loop over fields
-	fields := descriptor.GetField()
 	for _, field := range fields {
 		fieldDescriptorType := field.GetType()
 		switch fieldDescriptorType {
@@ -107,6 +112,97 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P(fmt.Sprintf("%s %s;", fieldType, fieldName))
 		}
 	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	////////////////////////////////////
+	// Generate decoder
+	////////////////////////////////////
+
+	b.P(fmt.Sprintf("library %sCodec {", structName))
+	b.Indent()
+
+	b.P(fmt.Sprintf("function decode(bytes memory buf) internal pure returns (bool, %s memory) {", structName))
+	b.Indent()
+
+	b.P(fmt.Sprintf("%s memory instance;", structName))
+	b.P("uint256 pos;")
+	b.P()
+	b.P("while (pos < buf.length) {")
+	b.Indent()
+	b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
+	b.P("if (!success) {")
+	b.Indent()
+	b.P("return (false, instance);")
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	for _, field := range fields {
+		fieldName := field.GetName()
+		fieldDescriptorType := field.GetType()
+		fieldType, err := typeToSol(fieldDescriptorType)
+		if err != nil {
+			return err
+		}
+
+		// switch fieldDescriptorType {
+		// case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_INT32:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_INT64:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// default:
+		// 	return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		// }
+
+		_ = fieldName
+		_ = fieldType
+	}
+
+	b.Unindent()
+	b.P("}")
+
+	b.Unindent()
+	b.P("}")
+
+	////////////////////////////////////
+	// Generate encoder
+	////////////////////////////////////
+
+	b.P()
+	b.P(fmt.Sprintf("function encode(%s memory msg) internal pure returns (bytes memory) {", structName))
+	b.Indent()
+
+	b.Unindent()
+	b.P("}")
 
 	b.Unindent()
 	b.P("}")
