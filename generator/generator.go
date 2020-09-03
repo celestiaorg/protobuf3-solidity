@@ -187,9 +187,34 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		b.P(fmt.Sprintf("function decode_%d(uint256 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint256) {", fieldNumber, structName))
 		b.Indent()
 
+		b.P("bool success;")
+		b.P()
+
+		if isRepeated(field.GetLabel()) {
+			b.P(fmt.Sprintf("(success, pos, uint64 repeated_bytes = decode_uint64(pos, buf);"))
+			b.P("if (!success) {")
+			b.Indent()
+			b.P("return (false, pos);")
+			b.Unindent()
+			b.P("}")
+			b.P()
+
+			// Do one pass to count the number of elements
+			b.P("while (repeated_bytes > 0) {")
+			b.Indent()
+			b.Unindent()
+			b.P("}")
+			b.P()
+
+			// Allocated memory
+			b.P()
+
+			// Now actually parse the elements
+		}
+
 		switch fieldDescriptorType {
 		case descriptorpb.FieldDescriptorProto_TYPE_INT32:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -197,7 +222,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_INT64:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -205,7 +230,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -213,7 +238,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -221,7 +246,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -229,7 +254,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -237,7 +262,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -245,7 +270,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -253,7 +278,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -261,7 +286,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -269,7 +294,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-			b.P(fmt.Sprintf("(bool success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -277,7 +302,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-			b.P(fmt.Sprintf("(bool success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+			// TODO do this right
+			b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -285,7 +311,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 		case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-			b.P(fmt.Sprintf("(bool success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+			// TODO do this right
+			b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -299,10 +326,6 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		default:
 			return errors.New("Unsupported field type " + fieldDescriptorType.String())
 		}
-
-		_ = fieldName
-		_ = fieldType
-		_ = fieldNumber
 
 		b.P()
 		b.P("return (true, pos);")
