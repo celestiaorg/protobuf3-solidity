@@ -89,8 +89,15 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P(fmt.Sprintf("struct %s {", structName))
 	b.Indent()
 
+	fieldCount := int32(0)
 	// Loop over fields
 	for _, field := range fields {
+		fieldNumber := field.GetNumber()
+		if fieldNumber != fieldCount+1 {
+			return errors.New("Field " + string(fieldNumber) + " does not increment by 1")
+		}
+		fieldCount++
+
 		fieldDescriptorType := field.GetType()
 		switch fieldDescriptorType {
 		case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
@@ -127,13 +134,24 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P(fmt.Sprintf("function decode(bytes memory buf) internal pure returns (bool, %s memory) {", structName))
 	b.Indent()
 
+	b.P("// Message instance")
 	b.P(fmt.Sprintf("%s memory instance;", structName))
+	b.P("// Current field number")
+	b.P("uint64 current_field_number;")
+	b.P("// Current position in the buffer")
 	b.P("uint256 pos;")
 	b.P()
 	b.P("while (pos < buf.length) {")
 	b.Indent()
 	b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
 	b.P("if (!success) {")
+	b.Indent()
+	b.P("return (false, instance);")
+	b.Unindent()
+	b.P("}")
+	b.P()
+	b.P("// Check that the field number is bounded")
+	b.P(fmt.Sprintf("if (field_number > %d) {", fieldCount))
 	b.Indent()
 	b.P("return (false, instance);")
 	b.Unindent()
