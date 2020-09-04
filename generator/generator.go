@@ -188,6 +188,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 	b.Unindent()
 	b.P("}")
+	b.P()
 
 	for _, field := range fields {
 		fieldName := field.GetName()
@@ -198,7 +199,6 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		}
 		fieldNumber := field.GetNumber()
 
-		b.P()
 		b.P(fmt.Sprintf("function decode_%d(uint256 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint256) {", fieldNumber, structName))
 		b.Indent()
 
@@ -347,13 +347,13 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 		b.Unindent()
 		b.P("}")
+		b.P()
 	}
 
 	////////////////////////////////////
 	// Generate encoder
 	////////////////////////////////////
 
-	b.P()
 	b.P(fmt.Sprintf("function encode(%s memory msg) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
