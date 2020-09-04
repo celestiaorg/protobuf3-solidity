@@ -32,7 +32,13 @@ func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
 	responseFiles := make([]*pluginpb.CodeGeneratorResponse_File, len(protoFiles))
 
 	for i := 0; i < len(protoFiles); i++ {
-		responseFile, err := generateFile(protoFiles[i])
+		protoFile := protoFiles[i]
+		// Forbid package declaration
+		if len(protoFile.GetPackage()) > 0 {
+			return nil, errors.New("Package name forbidden: " + protoFile.GetPackage())
+		}
+
+		responseFile, err := generateFile(protoFile)
 		if err != nil {
 			return nil, err
 		}
@@ -111,41 +117,41 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		fieldCount++
 
 		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err = checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+		arrayStr := ""
+		if isFieldRepeated(field) {
+			if isPrimitiveNumericType(fieldDescriptorType) {
+				if !isFieldPacked(field) {
+					return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+				}
+			} else {
+				if isFieldPacked(field) {
+					return errors.New("Repeated field " + structName + "." + fieldName + " must not be packed")
+				}
+				// Solidity doesn't allow arrays of strings or bytes
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					return errors.New("Repeated strings and bytes are not forbidden")
+				}
+			}
+			arrayStr = "[]"
+		}
+
 		switch fieldDescriptorType {
-		case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-			return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+		case descriptorpb.FieldDescriptorProto_TYPE_ENUM,
+			descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Names take the form ".name", so remove the leading period
+			b.P(fmt.Sprintf("%s%s %s;", field.GetTypeName()[1:], arrayStr, fieldName))
 		default:
 			// Convert protobuf field type to Solidity native type
 			fieldType, err := typeToSol(fieldDescriptorType)
 			if err != nil {
 				return err
-			}
-			fieldName := field.GetName()
-			err = checkKeyword(fieldName)
-			if err != nil {
-				return err
-			}
-
-			arrayStr := ""
-			if isFieldRepeated(field) {
-				if isPrimitiveNumericType(fieldDescriptorType) {
-					if !isFieldPacked(field) {
-						return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
-					}
-				} else {
-					if isFieldPacked(field) {
-						return errors.New("Repeated field " + structName + "." + fieldName + " must not be packed")
-					}
-					// Solidity doesn't allow arrays of strings or bytes
-					switch fieldDescriptorType {
-					case descriptorpb.FieldDescriptorProto_TYPE_STRING,
-						descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-						return errors.New("Repeated " + fieldType + " not allowed")
-					}
-				}
-				arrayStr = "[]"
 			}
 
 			b.P(fmt.Sprintf("%s%s %s;", fieldType, arrayStr, fieldName))
