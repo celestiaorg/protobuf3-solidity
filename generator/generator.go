@@ -326,7 +326,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				switch fieldDescriptorType {
 				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 					// TODO
-					b.P("revert(\"Unimplemented feature: enum decoding\");")
+					b.P("revert(\"Unimplemented feature: repeated enum decoding\");")
 				default:
 					fieldType, err := typeToSol(fieldDescriptorType)
 					if err != nil {
@@ -395,6 +395,9 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				}
 			} else {
 				// Non-packed repeated field (i.e. message)
+
+				// TODO
+				b.P("revert(\"Unimplemented feature: repeated embedded message decoding\");")
 			}
 		} else {
 			// Optional field (i.e. not repeated)
