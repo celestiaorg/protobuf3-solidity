@@ -537,16 +537,16 @@ func toSolWireType(fType descriptorpb.FieldDescriptorProto_Type) (string, error)
 		descriptorpb.FieldDescriptorProto_TYPE_SINT32,
 		descriptorpb.FieldDescriptorProto_TYPE_SINT64,
 		descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-		return "ProtobufLib.Varint", nil
+		return "ProtobufLib.WireType.Varint", nil
 	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
-		return "ProtobufLib.Bits32", nil
+		return "ProtobufLib.WireType.Bits32", nil
 	case descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
-		return "ProtobufLib.Bits64", nil
+		return "ProtobufLib.WireType.Bits64", nil
 	case descriptorpb.FieldDescriptorProto_TYPE_STRING,
 		descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-		return "ProtobufLib.LengthDelimited", nil
+		return "ProtobufLib.WireType.LengthDelimited", nil
 	}
 
 	return "", errors.New("Unsupported field type " + fType.String())
