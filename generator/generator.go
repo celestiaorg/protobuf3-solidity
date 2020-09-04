@@ -309,10 +309,6 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	for _, field := range fields {
 		fieldName := field.GetName()
 		fieldDescriptorType := field.GetType()
-		fieldType, err := typeToSol(fieldDescriptorType)
-		if err != nil {
-			return err
-		}
 		fieldNumber := field.GetNumber()
 
 		b.P(fmt.Sprintf("function decode_%d(uint256 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint256) {", fieldNumber, structName))
@@ -322,120 +318,88 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		b.P()
 
 		if isFieldRepeated(field) {
+			// Repeated field
+
 			if isFieldPacked(field) {
-				// Packed repeated
-				b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
+				// Packed repeated field
 
-				b.P("uint256 initial_pos = pos;")
-				b.P()
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+					// TODO
+					b.P("revert(\"Unimplemented feature: enum decoding\");")
+				default:
+					fieldType, err := typeToSol(fieldDescriptorType)
+					if err != nil {
+						return err
+					}
 
-				b.P("// Sanity checks")
-				b.P("if (initial_pos + len < initial_pos) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
+					// Packed repeated
+					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
 
-				b.P("// Do one pass to count the number of elements")
-				b.P("uint256 cnt = 0;")
-				b.P("while (pos - initial_pos < len) {")
-				b.Indent()
-				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P("cnt += 1;")
-				b.Unindent()
-				b.P("}")
-				b.P()
+					b.P("uint256 initial_pos = pos;")
+					b.P()
 
-				b.P("// Allocated memory")
-				b.P(fmt.Sprintf("instance.%s = new %s[](cnt);", fieldName, fieldType))
-				b.P()
+					b.P("// Sanity checks")
+					b.P("if (initial_pos + len < initial_pos) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
 
-				b.P("// Now actually parse the elements")
-				b.P("for (uint256 i = 0; i < cnt; i++) {")
-				b.Indent()
-				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.Unindent()
-				b.P("}")
-				b.P()
+					b.P("// Do one pass to count the number of elements")
+					b.P("uint256 cnt = 0;")
+					b.P("while (pos - initial_pos < len) {")
+					b.Indent()
+					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P("cnt += 1;")
+					b.Unindent()
+					b.P("}")
+					b.P()
 
-				b.P("// Decoding must have consumed len bytes")
-				b.P("if (pos != initial_pos + len) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
-				// TODO special case enum
+					b.P("// Allocated memory")
+					b.P(fmt.Sprintf("instance.%s = new %s[](cnt);", fieldName, fieldType))
+					b.P()
+
+					b.P("// Now actually parse the elements")
+					b.P("for (uint256 i = 0; i < cnt; i++) {")
+					b.Indent()
+					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Decoding must have consumed len bytes")
+					b.P("if (pos != initial_pos + len) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+				}
 			} else {
-				// Non-packed repeated
+				// Non-packed repeated field (i.e. message)
 			}
 		} else {
+			// Optional field (i.e. not repeated)
+
 			switch fieldDescriptorType {
-			case descriptorpb.FieldDescriptorProto_TYPE_INT32,
-				descriptorpb.FieldDescriptorProto_TYPE_INT64,
-				descriptorpb.FieldDescriptorProto_TYPE_UINT32,
-				descriptorpb.FieldDescriptorProto_TYPE_UINT64,
-				descriptorpb.FieldDescriptorProto_TYPE_SINT32,
-				descriptorpb.FieldDescriptorProto_TYPE_SINT64,
-				descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
-				descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
-				descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
-				descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
-				descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
-
-				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-			case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
-
-				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-			case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-				b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_%s(pos, buf);", fieldType))
-				b.P("if (!success) {")
-				b.Indent()
-				b.P("return (false, pos);")
-				b.Unindent()
-				b.P("}")
-				b.P()
-
-				b.P(fmt.Sprintf("instance.%s = new bytes(size);", fieldName))
-				b.P("for (uint256 i = 0; i < size; i++) {")
-				b.Indent()
-				b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
-				b.Unindent()
-				b.P("}")
-				b.P()
-
-				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 			case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 				// TODO
 				b.P("revert(\"Unimplemented feature: enum decoding\");")
@@ -443,7 +407,63 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				// TODO
 				b.P("revert(\"Unimplemented feature: embedded message decoding\");")
 			default:
-				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+				fieldType, err := typeToSol(fieldDescriptorType)
+				if err != nil {
+					return err
+				}
+
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_INT32,
+					descriptorpb.FieldDescriptorProto_TYPE_INT64,
+					descriptorpb.FieldDescriptorProto_TYPE_UINT32,
+					descriptorpb.FieldDescriptorProto_TYPE_UINT64,
+					descriptorpb.FieldDescriptorProto_TYPE_SINT32,
+					descriptorpb.FieldDescriptorProto_TYPE_SINT64,
+					descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
+					descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
+					descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
+					descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
+					descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+					b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_%s(pos, buf);", fieldType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = new bytes(size);", fieldName))
+					b.P("for (uint256 i = 0; i < size; i++) {")
+					b.Indent()
+					b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+				default:
+					return errors.New("Unsupported field type " + fieldDescriptorType.String())
+				}
 			}
 		}
 
