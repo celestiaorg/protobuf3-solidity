@@ -121,9 +121,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			arrayStr := ""
 			if isRepeated(field.GetLabel()) {
 				arrayStr = "[]"
-				if !field.GetOptions().GetPacked() {
-					// TODO repeated is false for primitive numeric, why?
-					// return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+				if isPrimitiveNumericType(fieldDescriptorType) && !field.GetOptions().GetPacked() {
+					return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
 				}
 			}
 
@@ -142,7 +141,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P(fmt.Sprintf("library %sCodec {", structName))
 	b.Indent()
 
-	b.P(fmt.Sprintf("function decode(bytes memory buf) internal pure returns (bool, %s memory) {", structName))
+	b.P(fmt.Sprintf("function decode(bytes memory buf) internal pure returns (bool, uint256, %s memory) {", structName))
 	b.Indent()
 
 	b.P("// Message instance")
@@ -170,6 +169,12 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.Unindent()
 	b.P("}")
 	b.P()
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	b.P("return (true, pos, instance);")
 
 	b.Unindent()
 	b.P("}")
@@ -334,9 +339,6 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		b.P("}")
 	}
 
-	b.Unindent()
-	b.P("}")
-
 	////////////////////////////////////
 	// Generate encoder
 	////////////////////////////////////
@@ -442,6 +444,24 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 	}
 
 	return s, nil
+}
+
+func isPrimitiveNumericType(fType descriptorpb.FieldDescriptorProto_Type) bool {
+	switch fType {
+	case descriptorpb.FieldDescriptorProto_TYPE_INT32,
+		descriptorpb.FieldDescriptorProto_TYPE_INT64,
+		descriptorpb.FieldDescriptorProto_TYPE_UINT32,
+		descriptorpb.FieldDescriptorProto_TYPE_UINT64,
+		descriptorpb.FieldDescriptorProto_TYPE_SINT32,
+		descriptorpb.FieldDescriptorProto_TYPE_SINT64,
+		descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
+		descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
+		descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
+		descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
+		descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		return true
+	}
+	return false
 }
 
 func isRepeated(label descriptorpb.FieldDescriptorProto_Label) bool {
