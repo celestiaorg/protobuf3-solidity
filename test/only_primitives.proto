@@ -13,21 +13,19 @@ message Message {
   fixed64 optional_fixed64 = 8;
   sfixed32 optional_sfixed32 = 9;
   sfixed64 optional_sfixed64 = 10;
-  string optional_bool = 11;
+  bool optional_bool = 11;
   string optional_string = 12;
   bytes optional_bytes = 13;
 
-  repeated int32 repeated_int32 = 14;
-  repeated int64 repeated_int64 = 15;
-  repeated uint32 repeated_uint32 = 16;
-  repeated uint64 repeated_uint64 = 17;
-  repeated sint32 repeated_sint32 = 18;
-  repeated sint64 repeated_sint64 = 19;
-  repeated fixed32 repeated_fixed32 = 20;
-  repeated fixed64 repeated_fixed64 = 21;
-  repeated sfixed32 repeated_sfixed32 = 22;
-  repeated sfixed64 repeated_sfixed64 = 23;
-  repeated string repeated_bool = 24;
-  repeated string repeated_string = 25;
-  repeated bytes repeated_bytes = 26;
+  repeated int32 repeated_int32 = 14 [packed = true];
+  repeated int64 repeated_int64 = 15 [packed = true];
+  repeated uint32 repeated_uint32 = 16 [packed = true];
+  repeated uint64 repeated_uint64 = 17 [packed = true];
+  repeated sint32 repeated_sint32 = 18 [packed = true];
+  repeated sint64 repeated_sint64 = 19 [packed = true];
+  repeated fixed32 repeated_fixed32 = 20 [packed = true];
+  repeated fixed64 repeated_fixed64 = 21 [packed = true];
+  repeated sfixed32 repeated_sfixed32 = 22 [packed = true];
+  repeated sfixed64 repeated_sfixed64 = 23 [packed = true];
+  repeated bool repeated_bool = 24 [packed = true];
 }

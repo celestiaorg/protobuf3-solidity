@@ -29,7 +29,7 @@ message Message {
   fixed64 optional_fixed64 = 8;
   sfixed32 optional_sfixed32 = 9;
   sfixed64 optional_sfixed64 = 10;
-  string optional_bool = 11;
+  bool optional_bool = 11;
   string optional_string = 12;
   bytes optional_bytes = 13;
   OtherEnum optional_enum = 14;
@@ -37,21 +37,19 @@ message Message {
   EmbeddedEnum optional_other_enum = 16;
   EmbeddedMessage optional_other_message = 17;
 
-  repeated int32 repeated_int32 = 18;
-  repeated int64 repeated_int64 = 19;
-  repeated uint32 repeated_uint32 = 20;
-  repeated uint64 repeated_uint64 = 21;
-  repeated sint32 repeated_sint32 = 22;
-  repeated sint64 repeated_sint64 = 23;
-  repeated fixed32 repeated_fixed32 = 24;
-  repeated fixed64 repeated_fixed64 = 25;
-  repeated sfixed32 repeated_sfixed32 = 26;
-  repeated sfixed64 repeated_sfixed64 = 27;
-  repeated string repeated_bool = 28;
-  repeated string repeated_string = 29;
-  repeated bytes repeated_bytes = 30;
-  repeated OtherEnum repeated_enum = 31;
-  repeated OtherMessage repeated_message = 32;
-  repeated EmbeddedEnum repeated_other_enum = 33;
-  repeated EmbeddedMessage repeated_other_message = 34;
+  repeated int32 repeated_int32 = 18 [packed = true];
+  repeated int64 repeated_int64 = 19 [packed = true];
+  repeated uint32 repeated_uint32 = 20 [packed = true];
+  repeated uint64 repeated_uint64 = 21 [packed = true];
+  repeated sint32 repeated_sint32 = 22 [packed = true];
+  repeated sint64 repeated_sint64 = 23 [packed = true];
+  repeated fixed32 repeated_fixed32 = 24 [packed = true];
+  repeated fixed64 repeated_fixed64 = 25 [packed = true];
+  repeated sfixed32 repeated_sfixed32 = 26 [packed = true];
+  repeated sfixed64 repeated_sfixed64 = 27 [packed = true];
+  repeated bool repeated_bool = 28 [packed = true];
+  repeated OtherEnum repeated_enum = 29 [packed = true];
+  repeated OtherMessage repeated_message = 30;
+  repeated EmbeddedEnum repeated_other_enum = 31 [packed = true];
+  repeated EmbeddedMessage repeated_other_message = 32;
 }
