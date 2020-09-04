@@ -143,6 +143,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P(fmt.Sprintf("library %sCodec {", structName))
 	b.Indent()
 
+	// Top-level decoder function
 	b.P(fmt.Sprintf("function decode(uint256 initial_pos, bytes memory buf, uint256 len) internal pure returns (bool, uint256, %s memory) {", structName))
 	b.Indent()
 
@@ -164,6 +165,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 	b.P("while (pos - initial_pos < len) {")
 	b.Indent()
+	b.P("// Decode the key (field number and wire type)")
 	b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
 	b.P("if (!success) {")
 	b.Indent()
@@ -180,16 +182,62 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P("}")
 	b.P()
 
+	b.P("success = check_key(field_number, wire_type);")
+	b.P("if (!success) {")
+	b.Indent()
+	b.P("return (false, pos, instance);")
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	b.P("(success, pos) = decode_field(pos, buf, instance);")
+	b.P("if (!success) {")
+	b.Indent()
+	b.P("return (false, pos, instance);")
+	b.Unindent()
+	b.P("}")
+
 	b.Unindent()
 	b.P("}")
 	b.P()
 
 	b.P("return (true, pos, instance);")
-
 	b.Unindent()
 	b.P("}")
 	b.P()
 
+	// Check key function
+	b.P("function check_key(uint64 field_number, ProtobufLib.WireType wire_type) internal pure returns (bool) {")
+	b.Indent()
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldNumber := field.GetNumber()
+
+		b.P(fmt.Sprintf("if (field_number == %d) {", fieldNumber))
+		b.Indent()
+		wireStr, err := toSolWireType(fieldDescriptorType)
+		if err != nil {
+			return err
+		}
+		b.P(fmt.Sprintf("return wire_type == %s;", wireStr))
+		b.Unindent()
+		b.P("}")
+		b.P()
+	}
+
+	b.P("return false;")
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	// Decode field dispatcher function
+	b.P(fmt.Sprintf("function decode_field(uint256 initial_pos, bytes memory buf, uint256 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint256) {", structName))
+	b.Indent()
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	// Individual field decoders
 	for _, field := range fields {
 		fieldName := field.GetName()
 		fieldDescriptorType := field.GetType()
@@ -478,4 +526,28 @@ func isPrimitiveNumericType(fType descriptorpb.FieldDescriptorProto_Type) bool {
 
 func isRepeated(label descriptorpb.FieldDescriptorProto_Label) bool {
 	return label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+}
+
+func toSolWireType(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
+	switch fType {
+	case descriptorpb.FieldDescriptorProto_TYPE_INT32,
+		descriptorpb.FieldDescriptorProto_TYPE_INT64,
+		descriptorpb.FieldDescriptorProto_TYPE_UINT32,
+		descriptorpb.FieldDescriptorProto_TYPE_UINT64,
+		descriptorpb.FieldDescriptorProto_TYPE_SINT32,
+		descriptorpb.FieldDescriptorProto_TYPE_SINT64,
+		descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		return "ProtobufLib.Varint", nil
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
+		descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+		return "ProtobufLib.Bits32", nil
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
+		descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+		return "ProtobufLib.Bits64", nil
+	case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+		descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		return "ProtobufLib.LengthDelimited", nil
+	}
+
+	return "", errors.New("Unsupported field type " + fType.String())
 }
