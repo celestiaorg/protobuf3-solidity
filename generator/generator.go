@@ -302,7 +302,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		if isFieldRepeated(field) {
 			if isFieldPacked(field) {
 				// Packed repeated
-				b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_length_delimited(pos, buf);"))
+				b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -310,23 +310,61 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				b.P("}")
 				b.P()
 
-				b.P("// Do one pass to count the number of elements")
-				b.P("while (size > 0) {")
+				b.P("uint256 initial_pos = pos;")
+				b.P()
+
+				b.P("// Sanity checks")
+				b.P("if (initial_pos + len < initial_pos) {")
 				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P("// Do one pass to count the number of elements")
+				b.P("uint256 cnt = 0;")
+				b.P("while (pos - initial_pos < len) {")
+				b.Indent()
+				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P("cnt += 1;")
 				b.Unindent()
 				b.P("}")
 				b.P()
 
 				b.P("// Allocated memory")
+				b.P(fmt.Sprintf("%s.%s = new %s[](cnt);", structName, fieldName, fieldType))
 				b.P()
 
 				b.P("// Now actually parse the elements")
+				b.P("for (uint256 i = 0; i < cnt; i++) {")
+				b.Indent()
+				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.Unindent()
+				b.P("}")
 				b.P()
+
+				b.P("// Decoding must have consumed len bytes")
+				b.P("if (pos != initial_pos + len) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+				// TODO special case enum
 			} else {
 				// Non-packed repeated
 			}
 		} else {
-
 			switch fieldDescriptorType {
 			case descriptorpb.FieldDescriptorProto_TYPE_INT32,
 				descriptorpb.FieldDescriptorProto_TYPE_INT64,
@@ -373,9 +411,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			}
 		}
 
-		b.P()
 		b.P("return (true, pos);")
-
 		b.Unindent()
 		b.P("}")
 		b.P()
