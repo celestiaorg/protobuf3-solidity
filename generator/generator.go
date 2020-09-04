@@ -55,6 +55,7 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 	b := &WriteableBuffer{}
 
 	// TODO option for license
+	// Generate heading
 	b.P(fmt.Sprintf("// SPDX-License-Identifier: %s", "CC0"))
 	b.P("pragma solidity " + SolidityVersionString + ";")
 	b.P(SolidityABIString)
@@ -62,6 +63,10 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 	b.P("import \"@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol\";")
 	b.P()
 
+	// TODO generate enums here
+	// Generate enums
+
+	// Generate messages
 	for i := 0; i < len(protoFile.GetMessageType()); i++ {
 		err := generateMessage(protoFile.GetMessageType()[i], b)
 		if err != nil {
@@ -80,6 +85,11 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	err := checkKeyword(structName)
 	if err != nil {
 		return err
+	}
+
+	// Forbid nested enums and messages
+	if len(descriptor.GetEnumType()) > 0 || len(descriptor.GetNestedType()) > 0 {
+		return errors.New("Nested enums and fields are forbidden")
 	}
 
 	fields := descriptor.GetField()
