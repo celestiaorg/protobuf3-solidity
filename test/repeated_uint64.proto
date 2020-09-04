@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package Package;
+
+message Message {
+  repeated uint64 repeated_uint64 = 1 [packed = true];
+}
