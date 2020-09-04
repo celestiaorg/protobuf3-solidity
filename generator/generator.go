@@ -230,12 +230,11 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P("function check_key(uint64 field_number, ProtobufLib.WireType wire_type) internal pure returns (bool) {")
 	b.Indent()
 	for _, field := range fields {
-		fieldDescriptorType := field.GetType()
 		fieldNumber := field.GetNumber()
 
 		b.P(fmt.Sprintf("if (field_number == %d) {", fieldNumber))
 		b.Indent()
-		wireStr, err := toSolWireType(fieldDescriptorType)
+		wireStr, err := toSolWireType(field)
 		if err != nil {
 			return err
 		}
@@ -571,7 +570,12 @@ func isRepeated(label descriptorpb.FieldDescriptorProto_Label) bool {
 	return label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 }
 
-func toSolWireType(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
+func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
+	fType := field.GetType()
+
+	if isRepeated(field.GetLabel()) {
+		return "ProtobufLib.WireType.LengthDelimited", nil
+	}
 	switch fType {
 	case descriptorpb.FieldDescriptorProto_TYPE_INT32,
 		descriptorpb.FieldDescriptorProto_TYPE_INT64,
