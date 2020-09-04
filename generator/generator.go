@@ -343,7 +343,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				b.P()
 
 				b.P("// Allocated memory")
-				b.P(fmt.Sprintf("%s.%s = new %s[](cnt);", structName, fieldName, fieldType))
+				b.P(fmt.Sprintf("instance.%s = new %s[](cnt);", fieldName, fieldType))
 				b.P()
 
 				b.P("// Now actually parse the elements")
@@ -389,6 +389,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				b.P("return (false, pos);")
 				b.Unindent()
 				b.P("}")
+				b.P()
+
 				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 			case descriptorpb.FieldDescriptorProto_TYPE_STRING:
 				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
@@ -397,20 +399,33 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				b.P("return (false, pos);")
 				b.Unindent()
 				b.P("}")
+				b.P()
+
 				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 			case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-				// TODO do this right
-				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_%s(pos, buf);", fieldType))
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
 				b.Unindent()
 				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("instance.%s = new bytes(size);", fieldName))
+				b.P("for (uint256 i = 0; i < size; i++) {")
+				b.Indent()
+				b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P()
+
 				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 			case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+				// TODO
+				b.P("revert(\"Unimplemented feature: enum decoding\");")
 			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+				// TODO
+				b.P("revert(\"Unimplemented feature: embedded message decoding\");")
 			default:
 				return errors.New("Unsupported field type " + fieldDescriptorType.String())
 			}
