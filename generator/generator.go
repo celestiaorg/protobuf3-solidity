@@ -145,8 +145,11 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		switch fieldDescriptorType {
 		case descriptorpb.FieldDescriptorProto_TYPE_ENUM,
 			descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-			// Names take the form ".name", so remove the leading period
-			b.P(fmt.Sprintf("%s%s %s;", field.GetTypeName()[1:], arrayStr, fieldName))
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
+			b.P(fmt.Sprintf("%s%s %s;", fieldTypeName, arrayStr, fieldName))
 		default:
 			// Convert protobuf field type to Solidity native type
 			fieldType, err := typeToSol(fieldDescriptorType)
@@ -644,4 +647,9 @@ func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
 	}
 
 	return "", errors.New("Unsupported field type " + fType.String())
+}
+
+func toSolMessageOrEnumName(field *descriptorpb.FieldDescriptorProto) (string, error) {
+	// Names take the form ".name", so remove the leading period
+	return field.GetTypeName()[1:], nil
 }
