@@ -120,10 +120,12 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 			arrayStr := ""
 			if isRepeated(field.GetLabel()) {
-				arrayStr = "[]"
-				if isPrimitiveNumericType(fieldDescriptorType) && !field.GetOptions().GetPacked() {
-					return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+				if isPrimitiveNumericType(fieldDescriptorType) {
+					if !field.GetOptions().GetPacked() {
+						return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+					}
 				}
+				arrayStr = "[]"
 			}
 
 			b.P(fmt.Sprintf("%s%s %s;", fieldType, arrayStr, fieldName))
