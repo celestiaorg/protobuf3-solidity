@@ -149,8 +149,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 	b.P("// Message instance")
 	b.P(fmt.Sprintf("%s memory instance;", structName))
-	b.P("// Current field number")
-	b.P("uint64 current_field_number;")
+	b.P("// Current field number, used for repeated fields")
+	b.P("uint64 current_field_number = 0;")
 	b.P("// Current position in the buffer")
 	b.P("uint256 pos = initial_pos;")
 	b.P()
@@ -196,7 +196,13 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P("return (false, pos, instance);")
 	b.Unindent()
 	b.P("}")
+	b.Unindent()
+	b.P("}")
+	b.P()
 
+	b.P("if (pos != initial_pos + len + 1) {")
+	b.Indent()
+	b.P("return (false, pos, instance);")
 	b.Unindent()
 	b.P("}")
 	b.P()
@@ -233,6 +239,29 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	// Decode field dispatcher function
 	b.P(fmt.Sprintf("function decode_field(uint256 initial_pos, bytes memory buf, uint256 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint256) {", structName))
 	b.Indent()
+	b.P("uint256 pos = initial_pos;")
+	b.P()
+
+	for _, field := range fields {
+		fieldNumber := field.GetNumber()
+
+		b.P(fmt.Sprintf("if (field_number == %d) {", fieldNumber))
+		b.Indent()
+		b.P(fmt.Sprintf("(success, pos) = decode_%d(pos, buf, instance);", fieldNumber))
+		b.P("if (!success) {")
+		b.Indent()
+		b.P("return (false, pos);")
+		b.Unindent()
+		b.P("}")
+		b.P()
+
+		b.P("return (true, pos);")
+		b.Unindent()
+		b.P("}")
+		b.P()
+	}
+
+	b.P("return (false, pos);")
 	b.Unindent()
 	b.P("}")
 	b.P()
