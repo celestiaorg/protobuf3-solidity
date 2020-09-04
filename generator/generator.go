@@ -119,10 +119,14 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			}
 
 			arrayStr := ""
-			if isRepeated(field.GetLabel()) {
+			if isFieldRepeated(field) {
 				if isPrimitiveNumericType(fieldDescriptorType) {
-					if !field.GetOptions().GetPacked() {
+					if !isFieldPacked(field) {
 						return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+					}
+				} else {
+					if isFieldPacked(field) {
+						return errors.New("Repeated field " + structName + "." + fieldName + " must not be packed")
 					}
 				}
 				arrayStr = "[]"
@@ -295,8 +299,9 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		b.P("bool success;")
 		b.P()
 
-		if isRepeated(field.GetLabel()) {
-			b.P(fmt.Sprintf("(success, pos, uint64 repeated_bytes = decode_uint64(pos, buf);"))
+		if isFieldRepeated(field) {
+			// TODO only do this for packed repeated
+			b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_length_delimited(pos, buf);"))
 			b.P("if (!success) {")
 			b.Indent()
 			b.P("return (false, pos);")
@@ -304,17 +309,18 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			b.P("}")
 			b.P()
 
-			// Do one pass to count the number of elements
-			b.P("while (repeated_bytes > 0) {")
+			b.P("// Do one pass to count the number of elements")
+			b.P("while (size > 0) {")
 			b.Indent()
 			b.Unindent()
 			b.P("}")
 			b.P()
 
-			// Allocated memory
+			b.P("// Allocated memory")
 			b.P()
 
-			// Now actually parse the elements
+			b.P("// Now actually parse the elements")
+			b.P()
 		}
 
 		switch fieldDescriptorType {
@@ -571,14 +577,18 @@ func isPrimitiveNumericType(fType descriptorpb.FieldDescriptorProto_Type) bool {
 	return false
 }
 
-func isRepeated(label descriptorpb.FieldDescriptorProto_Label) bool {
-	return label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+func isFieldRepeated(field *descriptorpb.FieldDescriptorProto) bool {
+	return field.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+}
+
+func isFieldPacked(field *descriptorpb.FieldDescriptorProto) bool {
+	return field.GetOptions().GetPacked()
 }
 
 func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
 	fType := field.GetType()
 
-	if isRepeated(field.GetLabel()) {
+	if isFieldRepeated(field) {
 		return "ProtobufLib.WireType.LengthDelimited", nil
 	}
 	switch fType {
