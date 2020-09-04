@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-package Package;
-
 enum OtherEnum {
   UNSPECIFIED = 0;
   ONE = 1;
