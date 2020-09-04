@@ -536,6 +536,10 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 		s = "string"
 	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 		s = "bytes"
+	case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+		return "", errors.New("Unsupported field type " + fType.String())
+	case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+		return "", errors.New("Unsupported field type " + fType.String())
 	default:
 		return "", errors.New("Unsupported field type " + fType.String())
 	}
@@ -560,7 +564,8 @@ func isPrimitiveNumericType(fType descriptorpb.FieldDescriptorProto_Type) bool {
 		descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
-		descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		descriptorpb.FieldDescriptorProto_TYPE_BOOL,
+		descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 		return true
 	}
 	return false
@@ -583,7 +588,8 @@ func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
 		descriptorpb.FieldDescriptorProto_TYPE_UINT64,
 		descriptorpb.FieldDescriptorProto_TYPE_SINT32,
 		descriptorpb.FieldDescriptorProto_TYPE_SINT64,
-		descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		descriptorpb.FieldDescriptorProto_TYPE_BOOL,
+		descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 		return "ProtobufLib.WireType.Varint", nil
 	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
@@ -592,7 +598,8 @@ func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
 		descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
 		return "ProtobufLib.WireType.Bits64", nil
 	case descriptorpb.FieldDescriptorProto_TYPE_STRING,
-		descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		descriptorpb.FieldDescriptorProto_TYPE_BYTES,
+		descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
 		return "ProtobufLib.WireType.LengthDelimited", nil
 	}
 
