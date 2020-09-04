@@ -300,142 +300,77 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 		b.P()
 
 		if isFieldRepeated(field) {
-			// TODO only do this for packed repeated
-			b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_length_delimited(pos, buf);"))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P()
+			if isFieldPacked(field) {
+				// Packed repeated
+				b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_length_delimited(pos, buf);"))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
 
-			b.P("// Do one pass to count the number of elements")
-			b.P("while (size > 0) {")
-			b.Indent()
-			b.Unindent()
-			b.P("}")
-			b.P()
+				b.P("// Do one pass to count the number of elements")
+				b.P("while (size > 0) {")
+				b.Indent()
+				b.Unindent()
+				b.P("}")
+				b.P()
 
-			b.P("// Allocated memory")
-			b.P()
+				b.P("// Allocated memory")
+				b.P()
 
-			b.P("// Now actually parse the elements")
-			b.P()
-		}
+				b.P("// Now actually parse the elements")
+				b.P()
+			} else {
+				// Non-packed repeated
+			}
+		} else {
 
-		switch fieldDescriptorType {
-		case descriptorpb.FieldDescriptorProto_TYPE_INT32:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_INT64:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-			b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-			// TODO do this right
-			b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-			// TODO do this right
-			b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
-			b.P("if (!success) {")
-			b.Indent()
-			b.P("return (false, pos);")
-			b.Unindent()
-			b.P("}")
-			b.P(fmt.Sprintf("instance.%s = v;", fieldName))
-		case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-			return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-			return errors.New("Unsupported field type " + fieldDescriptorType.String())
-		default:
-			return errors.New("Unsupported field type " + fieldDescriptorType.String())
+			switch fieldDescriptorType {
+			case descriptorpb.FieldDescriptorProto_TYPE_INT32,
+				descriptorpb.FieldDescriptorProto_TYPE_INT64,
+				descriptorpb.FieldDescriptorProto_TYPE_UINT32,
+				descriptorpb.FieldDescriptorProto_TYPE_UINT64,
+				descriptorpb.FieldDescriptorProto_TYPE_SINT32,
+				descriptorpb.FieldDescriptorProto_TYPE_SINT64,
+				descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
+				descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
+				descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
+				descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
+				descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+				b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+			case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+				// TODO do this right
+				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+			case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+				// TODO do this right
+				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+			case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+			default:
+				return errors.New("Unsupported field type " + fieldDescriptorType.String())
+			}
 		}
 
 		b.P()
