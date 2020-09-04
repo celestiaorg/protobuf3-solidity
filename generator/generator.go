@@ -128,6 +128,12 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 					if isFieldPacked(field) {
 						return errors.New("Repeated field " + structName + "." + fieldName + " must not be packed")
 					}
+					// Solidity doesn't allow arrays of strings or bytes
+					switch fieldDescriptorType {
+					case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+						descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+						return errors.New("Repeated " + fieldType + " not allowed")
+					}
 				}
 				arrayStr = "[]"
 			}
@@ -385,7 +391,6 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				b.P("}")
 				b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 			case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-				// TODO do this right
 				b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
 				b.P("if (!success) {")
 				b.Indent()
