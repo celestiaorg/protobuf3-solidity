@@ -7,5 +7,5 @@ message OtherMessage {
 message Message {
   OtherMessage optional_message = 1;
 
-  repeated OtherMessage repeated_message = 1;
+  repeated OtherMessage repeated_message = 2;
 }
