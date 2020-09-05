@@ -173,7 +173,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.Indent()
 
 	// Top-level decoder function
-	b.P(fmt.Sprintf("function decode(uint256 initial_pos, bytes memory buf, uint256 len) internal pure returns (bool, uint256, %s memory) {", structName))
+	b.P(fmt.Sprintf("function decode(uint256 initial_pos, bytes memory buf, uint64 len) internal pure returns (bool, uint256, %s memory) {", structName))
 	b.Indent()
 
 	b.P("// Message instance")
@@ -279,7 +279,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 	b.P()
 
 	// Decode field dispatcher function
-	b.P(fmt.Sprintf("function decode_field(uint256 initial_pos, bytes memory buf, uint256 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint256) {", structName))
+	b.P(fmt.Sprintf("function decode_field(uint256 initial_pos, bytes memory buf, uint64 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint256) {", structName))
 	b.Indent()
 	b.P("uint256 pos = initial_pos;")
 	b.P()
@@ -410,8 +410,30 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				// TODO
 				b.P("revert(\"Unimplemented feature: enum decoding\");")
 			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-				// TODO
-				b.P("revert(\"Unimplemented feature: embedded message decoding\");")
+				fieldTypeName, err := toSolMessageOrEnumName(field)
+				if err != nil {
+					return err
+				}
+				println(fieldTypeName)
+
+				b.P("(success, pos, uint64 len) = decode_embedded_message(pos, buf);")
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("(success, pos, %s memory nestedInstance) = %sCodec.decode(pos, buf, len);", fieldTypeName, fieldTypeName))
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("instance.%s = nestedInstance;", fieldName))
+				b.P()
 			default:
 				fieldType, err := typeToSol(fieldDescriptorType)
 				if err != nil {
@@ -450,7 +472,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-					b.P(fmt.Sprintf("(success, pos, uint64 size) = decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_%s(pos, buf);", fieldType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -458,8 +480,8 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 					b.P("}")
 					b.P()
 
-					b.P(fmt.Sprintf("instance.%s = new bytes(size);", fieldName))
-					b.P("for (uint256 i = 0; i < size; i++) {")
+					b.P(fmt.Sprintf("instance.%s = new bytes(len);", fieldName))
+					b.P("for (uint256 i = 0; i < len; i++) {")
 					b.Indent()
 					b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
 					b.Unindent()
