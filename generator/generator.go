@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -20,14 +21,42 @@ const SolidityABIString = "pragma experimental ABIEncoderV2;"
 type Generator struct {
 	request   *pluginpb.CodeGeneratorRequest
 	enumMaxes map[string]int
+
+	licenseString string
 }
 
 // New initializes a new Generator.
 func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 	g := new(Generator)
+
 	g.request = request
 	g.enumMaxes = make(map[string]int)
+
+	g.licenseString = "CC0"
+
 	return g
+}
+
+// ParseParameters parses command-line parameters
+func (g *Generator) ParseParameters() error {
+	parameterString := g.request.GetParameter()
+	if len(parameterString) == 0 {
+		return nil
+	}
+
+	for _, parameter := range strings.Split(parameterString, ",") {
+		keyvalue := strings.Split(parameter, "=")
+		key, value := keyvalue[0], keyvalue[1]
+
+		switch key {
+		case "license":
+			g.licenseString = value
+		default:
+			return errors.New("unrecognized option " + key)
+		}
+	}
+
+	return nil
 }
 
 // Generate generates Solidity code from the requested .proto files.
@@ -63,9 +92,8 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 	// Buffer to hold the generate file's text
 	b := &WriteableBuffer{}
 
-	// TODO option for license
 	// Generate heading
-	b.P(fmt.Sprintf("// SPDX-License-Identifier: %s", "CC0"))
+	b.P(fmt.Sprintf("// SPDX-License-Identifier: %s", g.licenseString))
 	b.P("pragma solidity " + SolidityVersionString + ";")
 	b.P(SolidityABIString)
 	b.P()
