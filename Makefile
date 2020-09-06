@@ -1,12 +1,16 @@
-GO = env GO111MODULE=on go
-GOBUILD = $(GO) build
-GOTEST = $(GO) test
-PROTOC = protoc
-BIN_DIR = bin
+GO := env GO111MODULE=on go
+GOBUILD := $(GO) build
+GOTEST := $(GO) test
+PROTOC := protoc
+BIN_DIR := bin
 
 LDFLAGS := -ldflags "-X main.version=$(shell git describe --tags)"
 
-TARGETS := protoc-gen-sol
+TARGET_GEN_SOL := protoc-gen-sol
+TARGETS := $(TARGET_GEN_SOL)
+
+TESTS_PASSING := $(wildcard test/pass/*)
+TESTS_FAILING := $(wildcard test/fail/*)
 
 all: build test
 
@@ -19,11 +23,13 @@ $(TARGETS):
 test-go: $(TARGETS)
 	$(GOTEST) -mod=readonly ./...
 
-test-protoc: test-protoc-check test-protoc-pass test-protoc-fail
+test-protoc: test-protoc-check $(TESTS_PASSING) $(TESTS_FAILING)
 
 test-protoc-check:
 	$(PROTOC) --version > /dev/null
 
-test-protoc-pass:
+$(TESTS_PASSING): build
+	$(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ $@/*.proto;
 
-test-protoc-fail:
+$(TESTS_FAILING): build
+	! $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ $@/*.proto;
