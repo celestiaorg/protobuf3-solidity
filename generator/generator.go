@@ -58,8 +58,7 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 		return nil, err
 	}
 
-	responseFile := &pluginpb.CodeGeneratorResponse_File{}
-
+	// Buffer to hold the generate file's text
 	b := &WriteableBuffer{}
 
 	// TODO option for license
@@ -88,6 +87,7 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 	}
 
 	// TODO add b to response
+	responseFile := &pluginpb.CodeGeneratorResponse_File{}
 	println(b.String())
 
 	return responseFile, nil
