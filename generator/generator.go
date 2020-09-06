@@ -92,7 +92,6 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 		Name:    proto.String(filepath.Base(protoFile.GetName()) + ".sol"),
 		Content: proto.String(b.String()),
 	}
-	// println(b.String())
 
 	return responseFile, nil
 }
