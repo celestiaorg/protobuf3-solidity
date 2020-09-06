@@ -570,12 +570,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P(fmt.Sprintf("instance.%s = new %s[](cnt);", fieldName, fieldTypeName))
 				b.P()
 
-				// TODO
 				b.P("// Now actually parse the elements")
 				b.P("pos = initial_pos;")
 				b.P("for (uint256 i = 0; i < cnt; i++) {")
 				b.Indent()
-				b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+				b.P("(success, pos, uint64 nestedLen) = decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -583,17 +582,15 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("}")
 				b.P()
 
-				b.P("// Check that value is within enum range")
-				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", g.enumMaxes[fieldTypeName]))
+				b.P(fmt.Sprintf("(success, pos, %s memory nestedInstance) = %sCodec.decode(pos, buf, nestedLen);", fieldTypeName, fieldTypeName))
+				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
 				b.Unindent()
 				b.P("}")
 				b.P()
 
-				b.P(fmt.Sprintf("instance.%s = %s(v);", fieldName, fieldTypeName))
-				b.P()
-
+				b.P(fmt.Sprintf("instance.%s[i] = nestedInstance;", fieldName))
 				b.Unindent()
 				b.P("}")
 				b.P()
