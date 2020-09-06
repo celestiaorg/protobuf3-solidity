@@ -3,7 +3,9 @@ package generator
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 )
@@ -29,33 +31,33 @@ func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 }
 
 // Generate generates Solidity code from the requested .proto files.
-func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
+func (g *Generator) Generate() (*pluginpb.CodeGeneratorResponse, error) {
+	response := &pluginpb.CodeGeneratorResponse{}
+
 	protoFiles := g.request.GetProtoFile()
-	responseFiles := make([]*pluginpb.CodeGeneratorResponse_File, len(protoFiles))
-
-	for i := 0; i < len(protoFiles); i++ {
-		protoFile := protoFiles[i]
-		// Forbid package declaration
-		if len(protoFile.GetPackage()) > 0 {
-			return nil, errors.New("Package name forbidden: " + protoFile.GetPackage())
-		}
-
+	for _, protoFile := range protoFiles {
 		responseFile, err := g.generateFile(protoFile)
 		if err != nil {
 			return nil, err
 		}
 
-		responseFiles[i] = responseFile
+		response.File = append(response.File, responseFile)
 	}
 
-	return responseFiles, nil
+	return response, nil
 }
 
 // generateFile generates Solidity code from a single .proto file.
 func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGeneratorResponse_File, error) {
+	// Only support proto3
 	err := checkSyntaxVersion(protoFile.GetSyntax())
 	if err != nil {
 		return nil, err
+	}
+
+	// Forbid package declaration
+	if len(protoFile.GetPackage()) > 0 {
+		return nil, errors.New("Package name forbidden: " + protoFile.GetPackage())
 	}
 
 	// Buffer to hold the generate file's text
@@ -86,9 +88,11 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 		}
 	}
 
-	// TODO add b to response
-	responseFile := &pluginpb.CodeGeneratorResponse_File{}
-	println(b.String())
+	responseFile := &pluginpb.CodeGeneratorResponse_File{
+		Name:    proto.String(filepath.Base(protoFile.GetName()) + ".sol"),
+		Content: proto.String(b.String()),
+	}
+	// println(b.String())
 
 	return responseFile, nil
 }

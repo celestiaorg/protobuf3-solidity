@@ -26,24 +26,21 @@ func main() {
 	// Initialize generator with request
 	g := generator.New(request)
 
-	// Generate responses
-	responses, err := g.Generate()
+	// Generate response
+	response, err := g.Generate()
 	if err != nil {
 		panic(err)
 	}
 
-	// For each response
-	for i := 0; i < len(responses); i++ {
-		// Marshal response for output
-		data, err = proto.Marshal(responses[i])
-		if err != nil {
-			panic(err)
-		}
+	// Marshal response for output
+	data, err = proto.Marshal(response)
+	if err != nil {
+		panic(err)
+	}
 
-		// Write response to stdout
-		_, err = os.Stdout.Write(data)
-		if err != nil {
-			panic(err)
-		}
+	// Write response to stdout
+	_, err = os.Stdout.Write(data)
+	if err != nil {
+		panic(err)
 	}
 }
