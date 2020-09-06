@@ -3,6 +3,8 @@ GOBUILD = $(GO) build
 GOTEST = $(GO) test
 BIN_DIR = bin
 
+LDFLAGS = -ldflags "-X main.version=`git describe --tags`"
+
 TARGETS := protoc-gen-sol
 
 all: build
@@ -11,4 +13,4 @@ build: $(TARGETS)
 
 $(TARGETS):
 	mkdir -p $(BIN_DIR)
-	$(GOBUILD) -v -o $(BIN_DIR)/ ./cmd/$@
+	$(GOBUILD) -v $(LDFLAGS) -o $(BIN_DIR)/ ./cmd/$@

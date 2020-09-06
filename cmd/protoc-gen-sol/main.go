@@ -9,6 +9,8 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+var version = "unspecified version"
+
 func main() {
 	// Read marshaled request from stdin
 	data, err := ioutil.ReadAll(os.Stdin)
@@ -32,7 +34,7 @@ func main() {
 	}
 
 	// Initialize generator with request
-	g := generator.New(request)
+	g := generator.New(request, version)
 
 	// Parse any command-line parameters
 	err = g.ParseParameters()
