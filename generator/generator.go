@@ -366,8 +366,82 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 				switch fieldDescriptorType {
 				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-					// TODO
-					b.P("revert(\"Unimplemented feature: repeated enum decoding\");")
+					fieldTypeName, err := toSolMessageOrEnumName(field)
+					if err != nil {
+						return err
+					}
+
+					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("uint256 initial_pos = pos;")
+					b.P()
+
+					b.P("// Sanity checks")
+					b.P("if (initial_pos + len < initial_pos) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Do one pass to count the number of elements")
+					b.P("uint256 cnt = 0;")
+					b.P("while (pos - initial_pos < len) {")
+					b.Indent()
+					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P("cnt += 1;")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Allocated memory")
+					b.P(fmt.Sprintf("instance.%s = new %s[](cnt);", fieldName, fieldTypeName))
+					b.P()
+
+					b.P("// Now actually parse the elements")
+					b.P("for (uint256 i = 0; i < cnt; i++) {")
+					b.Indent()
+					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Check that value is within enum range")
+					b.P(fmt.Sprintf("if (v < 0 || v > %d) {", g.enumMaxes[fieldTypeName]))
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = %s(v);", fieldName, fieldTypeName))
+					b.P()
+
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Decoding must have consumed len bytes")
+					b.P("if (pos != initial_pos + len) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
 				default:
 					fieldType, err := typeToSol(fieldDescriptorType)
 					if err != nil {
@@ -457,8 +531,6 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.Unindent()
 				b.P("}")
 				b.P()
-
-				println(field.GetTypeName())
 
 				b.P("// Check that value is within enum range")
 				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", g.enumMaxes[fieldTypeName]))
