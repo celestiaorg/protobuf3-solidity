@@ -7,10 +7,13 @@ LDFLAGS = -ldflags "-X main.version=`git describe --tags`"
 
 TARGETS := protoc-gen-sol
 
-all: build
+all: build test
 
 build: $(TARGETS)
 
 $(TARGETS):
 	mkdir -p $(BIN_DIR)
 	$(GOBUILD) -v $(LDFLAGS) -o $(BIN_DIR)/ ./cmd/$@
+
+test: $(TARGETS)
+	$(GOTEST) -mod=readonly ./...
