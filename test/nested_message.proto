@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message OtherMessage {
+  uint64 other_field = 1;
+}
+
+message Message {
+  OtherMessage optional_message = 1;
+
+  repeated OtherMessage repeated_message = 2;
+}

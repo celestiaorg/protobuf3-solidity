@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+enum OtherEnum {
+  UNSPECIFIED = 0;
+  ONE = 1;
+  TWO = 2;
+};
+
+message Message {
+  OtherEnum optional_enum = 1;
+
+  repeated OtherEnum repeated_enum = 2 [packed = true];
+}
