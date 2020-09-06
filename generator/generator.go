@@ -16,13 +16,15 @@ const SolidityABIString = "pragma experimental ABIEncoderV2;"
 
 // Generator generates Solidity code from .proto files.
 type Generator struct {
-	request *pluginpb.CodeGeneratorRequest
+	request   *pluginpb.CodeGeneratorRequest
+	enumMaxes map[string]int
 }
 
 // New initializes a new Generator.
 func New(request *pluginpb.CodeGeneratorRequest) *Generator {
 	g := new(Generator)
 	g.request = request
+	g.enumMaxes = make(map[string]int)
 	return g
 }
 
@@ -38,7 +40,7 @@ func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
 			return nil, errors.New("Package name forbidden: " + protoFile.GetPackage())
 		}
 
-		responseFile, err := generateFile(protoFile)
+		responseFile, err := g.generateFile(protoFile)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +52,7 @@ func (g *Generator) Generate() ([]*pluginpb.CodeGeneratorResponse_File, error) {
 }
 
 // generateFile generates Solidity code from a single .proto file.
-func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGeneratorResponse_File, error) {
+func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGeneratorResponse_File, error) {
 	err := checkSyntaxVersion(protoFile.GetSyntax())
 	if err != nil {
 		return nil, err
@@ -69,12 +71,17 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 	b.P("import \"@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol\";")
 	b.P()
 
-	// TODO generate enums here
 	// Generate enums
+	for _, descriptor := range protoFile.GetEnumType() {
+		err := g.generateEnum(descriptor, b)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Generate messages
-	for i := 0; i < len(protoFile.GetMessageType()); i++ {
-		err := generateMessage(protoFile.GetMessageType()[i], b)
+	for _, descriptor := range protoFile.GetMessageType() {
+		err := g.generateMessage(descriptor, b)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +93,38 @@ func generateFile(protoFile *descriptorpb.FileDescriptorProto) (*pluginpb.CodeGe
 	return responseFile, nil
 }
 
-func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffer) error {
+func (g *Generator) generateEnum(descriptor *descriptorpb.EnumDescriptorProto, b *WriteableBuffer) error {
+	enumName := descriptor.GetName()
+	enumValues := descriptor.GetValue()
+
+	enumNamesString := ""
+	oldValue := -1
+	for _, enumValue := range enumValues {
+		if oldValue != -1 {
+			enumNamesString += ", "
+		}
+
+		name := enumValue.GetName()
+		value := int(enumValue.GetNumber())
+
+		enumNamesString += name
+
+		if value != oldValue+1 {
+			return errors.New("Enums must start at 0 and increment by 1")
+		}
+		oldValue = value
+	}
+
+	b.P(fmt.Sprintf("enum %s { %s }", enumName, enumNamesString))
+	b.P()
+
+	// Store the maximum enum value for later use
+	g.enumMaxes[enumName] = oldValue
+
+	return nil
+}
+
+func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffer) error {
 	structName := descriptor.GetName()
 	err := checkKeyword(structName)
 	if err != nil {
@@ -400,7 +438,7 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 				// Non-packed repeated field (i.e. message)
 
 				// TODO
-				b.P("revert(\"Unimplemented feature: repeated embedded message decoding\");")
+				b.P("revert(\"Unimplemented feature: repeated nested message decoding\");")
 			}
 		} else {
 			// Optional field (i.e. not repeated)
@@ -408,13 +446,36 @@ func generateMessage(descriptor *descriptorpb.DescriptorProto, b *WriteableBuffe
 			switch fieldDescriptorType {
 			case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 				// TODO
-				b.P("revert(\"Unimplemented feature: enum decoding\");")
+				fieldTypeName, err := toSolMessageOrEnumName(field)
+				if err != nil {
+					return err
+				}
+
+				b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				println(field.GetTypeName())
+
+				b.P("// Check that value is within enum range")
+				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", 42))
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("instance.%s = %s(v);", fieldName, fieldTypeName))
+				b.P()
 			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
 				fieldTypeName, err := toSolMessageOrEnumName(field)
 				if err != nil {
 					return err
 				}
-				println(fieldTypeName)
 
 				b.P("(success, pos, uint64 len) = decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
