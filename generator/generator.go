@@ -445,7 +445,6 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 			switch fieldDescriptorType {
 			case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-				// TODO
 				fieldTypeName, err := toSolMessageOrEnumName(field)
 				if err != nil {
 					return err
@@ -462,7 +461,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				println(field.GetTypeName())
 
 				b.P("// Check that value is within enum range")
-				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", 42))
+				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", g.enumMaxes[fieldTypeName]))
 				b.Indent()
 				b.P("return (false, pos);")
 				b.Unindent()
