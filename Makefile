@@ -3,7 +3,7 @@ GOBUILD = $(GO) build
 GOTEST = $(GO) test
 BIN_DIR = bin
 
-LDFLAGS = -ldflags "-X main.version=`git describe --tags`"
+LDFLAGS := -ldflags "-X main.version=$(shell git describe --tags)"
 
 TARGETS := protoc-gen-sol
 
