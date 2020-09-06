@@ -34,6 +34,16 @@ func main() {
 	// Initialize generator with request
 	g := generator.New(request)
 
+	// Parse any command-line parameters
+	err = g.ParseParameters()
+	if err != nil {
+		err = responseError(err)
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(0)
+	}
+
 	// Generate response
 	response, err := g.Generate()
 	if err != nil {
