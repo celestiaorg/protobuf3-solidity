@@ -471,6 +471,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Now actually parse the elements")
+					b.P("pos = initial_pos;")
 					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
 					b.P("int32 v;")
