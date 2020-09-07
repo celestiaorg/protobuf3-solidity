@@ -88,7 +88,7 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 
 	// Forbid package declaration
 	if len(protoFile.GetPackage()) > 0 {
-		return nil, errors.New("Package name forbidden: " + protoFile.GetPackage())
+		return nil, errors.New("package declaration forbidden: " + protoFile.GetPackage())
 	}
 
 	// Buffer to hold the generate file's text
@@ -131,6 +131,10 @@ func (g *Generator) generateEnum(descriptor *descriptorpb.EnumDescriptorProto, b
 	enumName := descriptor.GetName()
 	enumValues := descriptor.GetValue()
 
+	if len(enumValues) == 0 {
+		return errors.New("enums must have at least one value: " + enumName)
+	}
+
 	enumNamesString := ""
 	oldValue := -1
 	for _, enumValue := range enumValues {
@@ -144,7 +148,7 @@ func (g *Generator) generateEnum(descriptor *descriptorpb.EnumDescriptorProto, b
 		enumNamesString += name
 
 		if value != oldValue+1 {
-			return errors.New("Enums must start at 0 and increment by 1")
+			return errors.New("enums must start at 0 and increment by 1: " + enumName + "." + name)
 		}
 		oldValue = value
 	}
@@ -167,10 +171,14 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 	// Forbid nested enums and messages
 	if len(descriptor.GetEnumType()) > 0 || len(descriptor.GetNestedType()) > 0 {
-		return errors.New("Nested enums and fields are forbidden")
+		return errors.New("nested enum and message definitions are forbidden: " + structName)
 	}
 
 	fields := descriptor.GetField()
+
+	if len(fields) == 0 {
+		return errors.New("messages must have at least one field: " + structName)
+	}
 
 	////////////////////////////////////
 	// Generate struct
@@ -182,33 +190,34 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	fieldCount := int32(0)
 	// Loop over fields
 	for _, field := range fields {
-		fieldNumber := field.GetNumber()
-		if fieldNumber != fieldCount+1 {
-			return errors.New("Field " + string(fieldNumber) + " does not increment by 1")
-		}
-		fieldCount++
-
 		fieldDescriptorType := field.GetType()
 		fieldName := field.GetName()
 		err = checkKeyword(fieldName)
 		if err != nil {
 			return err
 		}
+
+		fieldNumber := field.GetNumber()
+		if fieldNumber != fieldCount+1 {
+			return errors.New("field number does not increment by 1: " + structName + "." + fieldName)
+		}
+		fieldCount++
+
 		arrayStr := ""
 		if isFieldRepeated(field) {
 			if isPrimitiveNumericType(fieldDescriptorType) {
 				if !isFieldPacked(field) {
-					return errors.New("Repeated field " + structName + "." + fieldName + " must be packed")
+					return errors.New("repeated primitive numeric field must be packed: " + structName + "." + fieldName)
 				}
 			} else {
 				if isFieldPacked(field) {
-					return errors.New("Repeated field " + structName + "." + fieldName + " must not be packed")
+					return errors.New("repeated message field must not be packed: " + structName + "." + fieldName)
 				}
 				// Solidity doesn't allow arrays of strings or bytes
 				switch fieldDescriptorType {
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
 					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-					return errors.New("Repeated strings and bytes are not forbidden")
+					return errors.New("repeated strings and bytes are forbidden: " + structName + "." + fieldName)
 				}
 			}
 			arrayStr = "[]"
@@ -745,7 +754,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 				default:
-					return errors.New("Unsupported field type " + fieldDescriptorType.String())
+					return errors.New("unsupported field type: " + fieldDescriptorType.String())
 				}
 			}
 		}
@@ -780,7 +789,7 @@ func checkSyntaxVersion(v string) error {
 		return nil
 	}
 
-	return errors.New("Must use syntax = \"proto3\";")
+	return errors.New("must use syntax = \"proto3\";")
 }
 
 func checkKeyword(w string) error {
@@ -816,7 +825,7 @@ func checkKeyword(w string) error {
 		"typedef",
 		"typeof",
 		"unchecked":
-		return errors.New("Using Solidity keyword " + w)
+		return errors.New("Solidity keywords forbidden: " + w)
 	}
 
 	return nil
@@ -852,12 +861,8 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 		s = "string"
 	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 		s = "bytes"
-	case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
-		return "", errors.New("Unsupported field type " + fType.String())
-	case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-		return "", errors.New("Unsupported field type " + fType.String())
 	default:
-		return "", errors.New("Unsupported field type " + fType.String())
+		return "", errors.New("unsupported field type: " + fType.String())
 	}
 
 	err := checkKeyword(s)
@@ -923,7 +928,7 @@ func toSolWireType(field *descriptorpb.FieldDescriptorProto) (string, error) {
 		return "ProtobufLib.WireType.LengthDelimited", nil
 	}
 
-	return "", errors.New("Unsupported field type " + fType.String())
+	return "", errors.New("unsupported field type: " + fType.String())
 }
 
 func toSolMessageOrEnumName(field *descriptorpb.FieldDescriptorProto) (string, error) {
