@@ -34,8 +34,8 @@ contract("TestFixture", async (accounts) => {
           optionalSfixed32: -900,
           optionalSfixed64: -9000,
           optionalBool: true,
-          // optionsString: "foorbar",
-          // optionsBytes: "0xdeadbeef",
+          optionalString: "foorbar",
+          optionalBytes: Buffer.from("deadbeef", "hex"),
         };
 
         const message = Message.create(messageObj);
