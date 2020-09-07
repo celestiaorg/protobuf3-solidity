@@ -408,6 +408,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		fieldDescriptorType := field.GetType()
 		fieldNumber := field.GetNumber()
 
+		b.P(fmt.Sprintf("// %s.%s", structName, fieldName))
 		b.P(fmt.Sprintf("function decode_%d(uint64 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint64) {", fieldNumber, structName))
 		b.Indent()
 
