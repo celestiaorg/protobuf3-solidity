@@ -153,6 +153,36 @@ contract("TestFixture", async (accounts) => {
         const { 0: success, 1: decoded } = result;
         assert.equal(success, false);
       });
+
+      it("included default value", async () => {
+        const instance = await TestFixture.deployed();
+
+        const messageObj = {
+          optionalUint32: 0, // 1800
+          optionalUint64: 1, // 2001
+        };
+
+        const encoded = "18002001";
+
+        const result = await instance.decode.call("0x" + encoded);
+        const { 0: success, 1: decoded } = result;
+        assert.equal(success, false);
+      });
+
+      it("extra data", async () => {
+        const instance = await TestFixture.deployed();
+
+        const messageObj = {
+          optionalUint32: 1, // 1801
+          optionalUint64: 1, // 2001
+        };
+
+        const encoded = "18012001deadbeef";
+
+        const result = await instance.decode.call("0x" + encoded);
+        const { 0: success, 1: decoded } = result;
+        assert.equal(success, false);
+      });
     });
   });
 });
