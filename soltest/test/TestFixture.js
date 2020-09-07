@@ -21,6 +21,13 @@ contract("TestFixture", async (accounts) => {
         const instance = await TestFixture.deployed();
 
         const root = await protobuf.load("../test/pass/all_features/all_features.proto");
+
+        const OtherMessage = root.lookupType("OtherMessage");
+        otherMessageObj = {
+          otherField: 3,
+        };
+        const otherMessage = OtherMessage.create(otherMessageObj);
+
         const Message = root.lookupType("Message");
         const messageObj = {
           optionalInt32: -42,
@@ -37,7 +44,7 @@ contract("TestFixture", async (accounts) => {
           optionalString: "foorbar",
           optionalBytes: Buffer.from("deadbeef", "hex"),
           optionalEnum: 1,
-          // // optionalMessage: null,
+          optionalMessage: otherMessage,
           repeatedInt32: [-42, -41],
           repeatedInt64: [-420, -421],
           repeatedUint32: [42, 41],
@@ -50,17 +57,17 @@ contract("TestFixture", async (accounts) => {
           repeatedSfixed64: [-9000, -8999],
           repeatedBool: [true, false],
           repeatedEnum: [1, 2],
-          // // repeatedMessage: null,
+          repeatedMessage: [otherMessage, otherMessage],
         };
 
         const message = Message.create(messageObj);
-        // console.log(message);
+        console.log(message);
         const encoded = Message.encode(message).finish().toString("hex");
-        // console.log(encoded);
+        console.log(encoded);
 
         const result = await instance.decode.call("0x" + encoded);
         const { 0: success, 1: decoded } = result;
-        // console.log(decoded);
+        console.log(decoded);
         assert.equal(success, true);
 
         await instance.decode("0x" + encoded);
