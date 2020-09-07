@@ -3,6 +3,8 @@ const truffleAssert = require("truffle-assertions");
 
 const TestFixture = artifacts.require("TestFixture");
 
+const AllFeaturesProtoFile = "../test/pass/all_features/all_features.proto";
+
 contract("TestFixture", async (accounts) => {
   describe("constructor", async () => {
     it("should deploy", async () => {
@@ -20,7 +22,7 @@ contract("TestFixture", async (accounts) => {
       it("all features", async () => {
         const instance = await TestFixture.deployed();
 
-        const root = await protobuf.load("../test/pass/all_features/all_features.proto");
+        const root = await protobuf.load(AllFeaturesProtoFile);
 
         const OtherMessage = root.lookupType("OtherMessage");
         otherMessageObj = {
@@ -99,6 +101,27 @@ contract("TestFixture", async (accounts) => {
 
         await instance.decode("0x" + encoded);
       });
+
+      it("field start >1", async () => {
+        const instance = await TestFixture.deployed();
+
+        const root = await protobuf.load(AllFeaturesProtoFile);
+
+        const Message = root.lookupType("Message");
+        const messageObj = {
+          optionalUint64: 420,
+        };
+
+        const message = Message.create(messageObj);
+        const encoded = Message.encode(message).finish().toString("hex");
+
+        const result = await instance.decode.call("0x" + encoded);
+        const { 0: success, 1: decoded } = result;
+        assert.equal(success, true);
+        assert.equal(decoded.optional_uint64, messageObj.optionalUint64);
+
+        await instance.decode("0x" + encoded);
+      });
     });
   });
 
@@ -112,6 +135,22 @@ contract("TestFixture", async (accounts) => {
       };
 
       const encoded = "20011801";
+
+      const result = await instance.decode.call("0x" + encoded);
+      const { 0: success, 1: decoded } = result;
+      assert.equal(success, false);
+    });
+  });
+
+  describe("failing", async () => {
+    it("repeated not-repeated field", async () => {
+      const instance = await TestFixture.deployed();
+
+      const messageObj = {
+        optionalUint64: 1, // 2001
+      };
+
+      const encoded = "20012001";
 
       const result = await instance.decode.call("0x" + encoded);
       const { 0: success, 1: decoded } = result;
