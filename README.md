@@ -74,17 +74,17 @@ message Message {
 **Rules to keep in mind:**
 1. Enum values must start at `0` and increment by `1`.
 1. Field numbers must start at `1` and increment by `1`.
-1. Repeated numeric types must explicitly specify `[packed = true]`.
+1. Repeated numeric types must currently explicitly specify `[packed = true]`.
 
 **Unsupported features**:
-* repeated `string` and `bytes` - Solidity does not support arrays of `string` or `bytes`. Workaround: wrap the field in a `message`.
-* nested `enum` or `message` definitions - All `enum` and `message` definitions must be top-level
-* `float` and `double` - Solidity does not support floating-point numbers.
-* `package` - Currently unsupported.
-* `import` - Undefined behavior.
-* multiple files - Undefined behavior.
-* `oneof` - Solidity does not support unions.
-* `map` - Maps are forbidden as per [ADR-027](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-027-deterministic-protobuf-serialization.md).
+1. repeated `string` and `bytes` - Solidity does not support arrays of `string` or `bytes`. Workaround: wrap the field in a `message`.
+1. nested `enum` or `message` definitions - All `enum` and `message` definitions must be top-level.
+1. `float` and `double` - Solidity does not support floating-point numbers.
+1. `package` - Currently unsupported.
+1. `import` - Currently unsupported, undefined behavior.
+1. multiple files - Currently unsupported, undefined behavior.
+1. `oneof` - Solidity does not support unions.
+1. `map` - Maps are forbidden as per [ADR-027](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-027-deterministic-protobuf-serialization.md).
 
 ## Building from source
 
