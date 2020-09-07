@@ -174,7 +174,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 	// Forbid nested enums and messages
 	if len(descriptor.GetEnumType()) > 0 || len(descriptor.GetNestedType()) > 0 {
-		return errors.New("nested enum and message definitions are forbidden: " + structName)
+		return errors.New("maps and nested enum and message definitions are forbidden: " + structName)
 	}
 
 	fields := descriptor.GetField()
