@@ -9,8 +9,8 @@ LDFLAGS := -ldflags "-X main.version=$(shell git describe --tags)"
 TARGET_GEN_SOL := protoc-gen-sol
 TARGETS := $(TARGET_GEN_SOL)
 
-TESTS_PASSING := $(wildcard test/pass/*)
-TESTS_FAILING := $(wildcard test/fail/*)
+TESTS_PASSING := $(sort $(wildcard test/pass/*))
+TESTS_FAILING := $(sort $(wildcard test/fail/*))
 
 all: build test
 
