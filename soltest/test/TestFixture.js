@@ -123,38 +123,36 @@ contract("TestFixture", async (accounts) => {
         await instance.decode("0x" + encoded);
       });
     });
-  });
 
-  describe("failing", async () => {
-    it("fields out of order", async () => {
-      const instance = await TestFixture.deployed();
+    describe("failing", async () => {
+      it("fields out of order", async () => {
+        const instance = await TestFixture.deployed();
 
-      const messageObj = {
-        optionalUint32: 1, // 1801
-        optionalUint64: 1, // 2001
-      };
+        const messageObj = {
+          optionalUint32: 1, // 1801
+          optionalUint64: 1, // 2001
+        };
 
-      const encoded = "20011801";
+        const encoded = "20011801";
 
-      const result = await instance.decode.call("0x" + encoded);
-      const { 0: success, 1: decoded } = result;
-      assert.equal(success, false);
-    });
-  });
+        const result = await instance.decode.call("0x" + encoded);
+        const { 0: success, 1: decoded } = result;
+        assert.equal(success, false);
+      });
 
-  describe("failing", async () => {
-    it("repeated not-repeated field", async () => {
-      const instance = await TestFixture.deployed();
+      it("repeated not-repeated field", async () => {
+        const instance = await TestFixture.deployed();
 
-      const messageObj = {
-        optionalUint64: 1, // 2001
-      };
+        const messageObj = {
+          optionalUint64: 1, // 2001
+        };
 
-      const encoded = "20012001";
+        const encoded = "20012001";
 
-      const result = await instance.decode.call("0x" + encoded);
-      const { 0: success, 1: decoded } = result;
-      assert.equal(success, false);
+        const result = await instance.decode.call("0x" + encoded);
+        const { 0: success, 1: decoded } = result;
+        assert.equal(success, false);
+      });
     });
   });
 });
