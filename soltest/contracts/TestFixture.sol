@@ -8,9 +8,9 @@ import "../../test/pass/all_features/all_features.proto.sol";
 contract TestFixture {
     // Functions are not pure so that we can measure gas
 
-    function decode(bytes memory buf) public returns (Message memory) {
+    function decode(bytes memory buf) public returns (bool, Message memory) {
         (bool success, uint64 pos, Message memory instance) = MessageCodec.decode(0, buf, uint64(buf.length));
-        return instance;
+        return (success, instance);
     }
 
     function encode(Message memory instance) public returns (bytes memory) {
