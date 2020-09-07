@@ -36,15 +36,31 @@ contract("TestFixture", async (accounts) => {
           optionalBool: true,
           optionalString: "foorbar",
           optionalBytes: Buffer.from("deadbeef", "hex"),
+          optionalEnum: 1,
+          // // optionalMessage: null,
+          repeatedInt32: [-42, -41],
+          repeatedInt64: [-420, -421],
+          repeatedUint32: [42, 41],
+          repeatedUint64: [420, 419],
+          repeatedSint32: [-69, -68],
+          repeatedSint64: [-690, -689],
+          repeatedFixed32: [900, 899],
+          repeatedFixed64: [9000, 8999],
+          repeatedSfixed32: [-900, -899],
+          repeatedSfixed64: [-9000, -8999],
+          repeatedBool: [true, false],
+          repeatedEnum: [1, 2],
+          // // repeatedMessage: null,
         };
 
         const message = Message.create(messageObj);
+        // console.log(message);
         const encoded = Message.encode(message).finish().toString("hex");
-        console.log(encoded);
+        // console.log(encoded);
 
         const result = await instance.decode.call("0x" + encoded);
         const { 0: success, 1: decoded } = result;
-        console.log(decoded);
+        // console.log(decoded);
         assert.equal(success, true);
 
         await instance.decode("0x" + encoded);
