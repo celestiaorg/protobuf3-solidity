@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+message Message {
+  repeated uint64 repeated_uint64 = 1;
+}

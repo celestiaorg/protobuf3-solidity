@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package Package;
+
+message Message {
+  uint64 optional_uint64 = 1;
+}
