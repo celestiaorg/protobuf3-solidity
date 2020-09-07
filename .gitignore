@@ -17,3 +17,6 @@
 # Binary output directory
 bin/
 
+# Generate test .sol files
+test/pass/**/*.sol
+test/fail/**/*.sol

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message Message {
+  message OtherMessage {
+    uint64 other_field = 1;
+  }
+
+  uint64 field = 1;
+  OtherMessage nested_message = 2;
+}
