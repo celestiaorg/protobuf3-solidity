@@ -101,4 +101,21 @@ contract("TestFixture", async (accounts) => {
       });
     });
   });
+
+  describe("failing", async () => {
+    it("fields out of order", async () => {
+      const instance = await TestFixture.deployed();
+
+      const messageObj = {
+        optionalUint32: 1, // 1801
+        optionalUint64: 1, // 2001
+      };
+
+      const encoded = "20011801";
+
+      const result = await instance.decode.call("0x" + encoded);
+      const { 0: success, 1: decoded } = result;
+      assert.equal(success, false);
+    });
+  });
 });
