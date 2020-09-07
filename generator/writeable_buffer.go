@@ -25,9 +25,11 @@ func (b *WriteableBuffer) Unindent() {
 
 // P writes an object to the buffer
 func (b *WriteableBuffer) P(s ...interface{}) {
-	b.buf.WriteString(b.indent)
-	for _, v := range s {
-		b.printAtom(v)
+	if s != nil {
+		b.buf.WriteString(b.indent)
+		for _, v := range s {
+			b.printAtom(v)
+		}
 	}
 	b.buf.WriteByte('\n')
 }

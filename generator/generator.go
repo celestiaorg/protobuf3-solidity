@@ -285,7 +285,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P("while (pos - initial_pos < len) {")
 	b.Indent()
 	b.P("// Decode the key (field number and wire type)")
-	b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
+	b.P("bool success;")
+	b.P("uint64 field_number;")
+	b.P("ProtobufLib.WireType wire_type;")
+	b.P("(success, pos, field_number, wire_type) = ProtobufLib.decode_key(pos, buf);")
 	b.P("if (!success) {")
 	b.Indent()
 	b.P("return (false, pos, instance);")
@@ -319,7 +322,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P()
 
 	b.P("// Actually decode the field")
-	b.P("(success, pos) = decode_field(pos, buf, instance);")
+	b.P("(success, pos) = decode_field(pos, buf, len, field_number, instance);")
 	b.P("if (!success) {")
 	b.Indent()
 	b.P("return (false, pos, instance);")
@@ -379,6 +382,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 		b.P(fmt.Sprintf("if (field_number == %d) {", fieldNumber))
 		b.Indent()
+		b.P("bool success;")
 		b.P(fmt.Sprintf("(success, pos) = decode_%d(pos, buf, instance);", fieldNumber))
 		b.P("if (!success) {")
 		b.Indent()
@@ -404,6 +408,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		fieldDescriptorType := field.GetType()
 		fieldNumber := field.GetNumber()
 
+		b.P(fmt.Sprintf("// %s.%s", structName, fieldName))
 		b.P(fmt.Sprintf("function decode_%d(uint64 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint64) {", fieldNumber, structName))
 		b.Indent()
 
@@ -425,7 +430,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 						return err
 					}
 
-					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
+					b.P("uint64 len;")
+					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_length_delimited(pos, buf);"))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -448,7 +454,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("uint64 cnt = 0;")
 					b.P("while (pos - initial_pos < len) {")
 					b.Indent()
-					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+					b.P("int32 v;")
+					b.P("(success, pos, v) = ProtobufLib.decode_enum(pos, buf);")
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -464,9 +471,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Now actually parse the elements")
+					b.P("pos = initial_pos;")
 					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
-					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+					b.P("int32 v;")
+					b.P("(success, pos, v) = ProtobufLib.decode_enum(pos, buf);")
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -501,8 +510,13 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					if err != nil {
 						return errors.New(err.Error() + ": " + structName + "." + fieldName)
 					}
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
 
-					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
+					b.P("uint64 len;")
+					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_length_delimited(pos, buf);"))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -525,7 +539,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("uint64 cnt = 0;")
 					b.P("while (pos - initial_pos < len) {")
 					b.Indent()
-					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P(fmt.Sprintf("%s v;", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -541,9 +556,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Now actually parse the elements")
+					b.P("pos = initial_pos;")
 					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
-					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P(fmt.Sprintf("%s v;", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -577,9 +594,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 				b.P("// Do one pass to count the number of elements")
 				b.P("uint64 cnt = 0;")
-				b.P("while (pos  < buf.length) {")
+				b.P("while (pos < buf.length) {")
 				b.Indent()
-				b.P("(success, pos, uint64 len) = decode_embedded_message(pos, buf);")
+				b.P("uint64 len;")
+				b.P("(success, pos, len) = ProtobufLib.decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -599,8 +617,17 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("cnt += 1;")
 				b.P()
 
+				b.P("if (pos >= buf.length) {")
+				b.Indent()
+				b.P("break;")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
 				b.P("// Decode next key")
-				b.P("(bool success, pos, uint64 field_number, ProtobufLib.WireType wire_type) = ProtobufLib.decode_key(pos, buf);")
+				b.P("uint64 field_number;")
+				b.P("ProtobufLib.WireType wire_type;")
+				b.P("(success, pos, field_number, wire_type) = ProtobufLib.decode_key(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -626,7 +653,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("pos = initial_pos;")
 				b.P("for (uint64 i = 0; i < cnt; i++) {")
 				b.Indent()
-				b.P("(success, pos, uint64 nestedLen) = decode_embedded_message(pos, buf);")
+				b.P("uint64 len;")
+				b.P("(success, pos, len) = ProtobufLib.decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -634,7 +662,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("}")
 				b.P()
 
-				b.P(fmt.Sprintf("(success, pos, %s memory nestedInstance) = %sCodec.decode(pos, buf, nestedLen);", fieldTypeName, fieldTypeName))
+				b.P("initial_pos = pos;")
+				b.P()
+
+				b.P(fmt.Sprintf("%s memory nestedInstance;", fieldTypeName))
+				b.P(fmt.Sprintf("(success, pos, nestedInstance) = %sCodec.decode(pos, buf, len);", fieldTypeName))
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -643,14 +675,19 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P()
 
 				b.P(fmt.Sprintf("instance.%s[i] = nestedInstance;", fieldName))
-				b.Unindent()
-				b.P("}")
 				b.P()
 
-				b.P("// Decoding must have consumed len bytes")
-				b.P("if (pos != initial_pos + len) {")
+				b.P("// Skip over next key, reuse len")
+				b.P("if (i < cnt - 1) {")
+				b.Indent()
+				b.P("(success, pos, len) = ProtobufLib.decode_uint64(pos, buf);")
+				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.Unindent()
+				b.P("}")
 				b.Unindent()
 				b.P("}")
 				b.P()
@@ -665,7 +702,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					return err
 				}
 
-				b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
+				b.P("int32 v;")
+				b.P("(success, pos, v) = ProtobufLib.decode_enum(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -689,7 +727,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					return err
 				}
 
-				b.P("(success, pos, uint64 len) = decode_embedded_message(pos, buf);")
+				b.P("uint64 len;")
+				b.P("(success, pos, len) = ProtobufLib.decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -697,7 +736,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("}")
 				b.P()
 
-				b.P(fmt.Sprintf("(success, pos, %s memory nestedInstance) = %sCodec.decode(pos, buf, len);", fieldTypeName, fieldTypeName))
+				b.P(fmt.Sprintf("%s memory nestedInstance;", fieldTypeName))
+				b.P(fmt.Sprintf("(success, pos, nestedInstance) = %sCodec.decode(pos, buf, len);", fieldTypeName))
 				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
@@ -709,6 +749,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P()
 			default:
 				fieldType, err := typeToSol(fieldDescriptorType)
+				if err != nil {
+					return errors.New(err.Error() + ": " + structName + "." + fieldName)
+				}
+				fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
 				if err != nil {
 					return errors.New(err.Error() + ": " + structName + "." + fieldName)
 				}
@@ -725,7 +769,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
 					descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
 					descriptorpb.FieldDescriptorProto_TYPE_BOOL:
-					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P(fmt.Sprintf("%s v;", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -734,8 +779,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P()
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING:
-					b.P(fmt.Sprintf("(success, pos, %s memory v) = decode_%s(pos, buf);", fieldType, fieldType))
+					b.P(fmt.Sprintf("%s memory v;", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -744,8 +791,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P()
 				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_%s(pos, buf);", fieldType))
+					b.P("uint64 len;")
+					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -761,7 +810,8 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("}")
 					b.P()
 
-					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P("pos = pos + len;")
+					b.P()
 				default:
 					return errors.New("unsupported field type: " + fieldDescriptorType.String())
 				}
@@ -778,7 +828,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	// Generate encoder
 	////////////////////////////////////
 
-	b.P(fmt.Sprintf("function encode(%s memory msg) internal pure returns (bytes memory) {", structName))
+	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
 	b.P("revert(\"Unimplemented feature: encoding\");")
@@ -864,6 +914,48 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 		s = "int32"
 	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
 		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		s = "bool"
+	case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+		s = "string"
+	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		s = "bytes"
+	default:
+		return "", errors.New("unsupported field type " + fType.String())
+	}
+
+	err := checkKeyword(s)
+	if err != nil {
+		return s, err
+	}
+
+	return s, nil
+}
+
+func typeToDecodeSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
+	s := ""
+
+	switch fType {
+	case descriptorpb.FieldDescriptorProto_TYPE_INT32:
+		s = "int32"
+	case descriptorpb.FieldDescriptorProto_TYPE_INT64:
+		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
+		s = "uint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
+		s = "uint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
+		s = "sint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
+		s = "sint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
+		s = "fixed32"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
+		s = "fixed64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+		s = "sfixed32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+		s = "sfixed64"
 	case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
 		s = "bool"
 	case descriptorpb.FieldDescriptorProto_TYPE_STRING:
