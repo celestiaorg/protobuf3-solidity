@@ -594,7 +594,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 				b.P("// Do one pass to count the number of elements")
 				b.P("uint64 cnt = 0;")
-				b.P("while (pos  < buf.length) {")
+				b.P("while (pos < buf.length) {")
 				b.Indent()
 				b.P("uint64 len;")
 				b.P("(success, pos, len) = ProtobufLib.decode_embedded_message(pos, buf);")
@@ -615,6 +615,13 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 				b.P("pos += len;")
 				b.P("cnt += 1;")
+				b.P()
+
+				b.P("if (pos >= buf.length) {")
+				b.Indent()
+				b.P("break;")
+				b.Unindent()
+				b.P("}")
 				b.P()
 
 				b.P("// Decode next key")
@@ -670,10 +677,15 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P(fmt.Sprintf("instance.%s[i] = nestedInstance;", fieldName))
 				b.P()
 
-				b.P("// Decoding must have consumed len bytes")
-				b.P("if (pos != initial_pos + len) {")
+				b.P("// Skip over next key, reuse len")
+				b.P("if (i < cnt - 1) {")
+				b.Indent()
+				b.P("(success, pos, len) = ProtobufLib.decode_uint64(pos, buf);")
+				b.P("if (!success) {")
 				b.Indent()
 				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
 				b.Unindent()
 				b.P("}")
 				b.Unindent()
