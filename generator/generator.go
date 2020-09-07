@@ -132,6 +132,7 @@ func (g *Generator) generateEnum(descriptor *descriptorpb.EnumDescriptorProto, b
 	enumName := descriptor.GetName()
 	enumValues := descriptor.GetValue()
 
+	// Note: we don't need this check since it's enforced by protoc, but keep it just in case
 	if len(enumValues) == 0 {
 		return errors.New("enums must have at least one value: " + enumName)
 	}
@@ -148,6 +149,7 @@ func (g *Generator) generateEnum(descriptor *descriptorpb.EnumDescriptorProto, b
 
 		enumNamesString += name
 
+		// Note: checking for zero isn't needed since it's enforced by protoc
 		if value != oldValue+1 {
 			return errors.New("enums must start at 0 and increment by 1: " + enumName + "." + name)
 		}
