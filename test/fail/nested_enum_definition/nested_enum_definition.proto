@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message Message {
+  enum Enum {
+    ZERO = 0;
+    ONE = 1;
+    TWO = 2;
+  };
+
+  uint64 field = 1;
+  Enum enum_field = 2;
+}
