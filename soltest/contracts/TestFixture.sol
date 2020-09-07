@@ -10,9 +10,6 @@ contract TestFixture {
 
     function decode(bytes memory buf) public returns (bool, Message memory) {
         (bool success, uint64 pos, Message memory instance) = MessageCodec.decode(0, buf, uint64(buf.length));
-        if (pos != buf.length) {
-            return (false, instance);
-        }
 
         return (success, instance);
     }
