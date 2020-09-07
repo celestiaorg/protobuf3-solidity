@@ -100,6 +100,7 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 	b.P("pragma solidity " + SolidityVersionString + ";")
 	b.P(SolidityABIString)
 	b.P()
+
 	b.P("import \"@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol\";")
 	b.P()
 
