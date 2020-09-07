@@ -439,6 +439,14 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("}")
 					b.P()
 
+					b.P("// Empty packed array must be omitted")
+					b.P("if (len == 0) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
 					b.P("uint64 initial_pos = pos;")
 					b.P()
 
@@ -518,6 +526,14 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("uint64 len;")
 					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_length_delimited(pos, buf);"))
 					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Empty packed array must be omitted")
+					b.P("if (len == 0) {")
 					b.Indent()
 					b.P("return (false, pos);")
 					b.Unindent()
@@ -711,6 +727,14 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("}")
 				b.P()
 
+				b.P("// Default value must be omitted")
+				b.P("if (v == 0) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
 				b.P("// Check that value is within enum range")
 				b.P(fmt.Sprintf("if (v < 0 || v > %d) {", g.enumMaxes[fieldTypeName]))
 				b.Indent()
@@ -730,6 +754,14 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P("uint64 len;")
 				b.P("(success, pos, len) = ProtobufLib.decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
+				b.Indent()
+				b.P("return (false, pos);")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P("// Default value must be omitted")
+				b.P("if (len == 0) {")
 				b.Indent()
 				b.P("return (false, pos);")
 				b.Unindent()
@@ -767,11 +799,38 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					descriptorpb.FieldDescriptorProto_TYPE_FIXED32,
 					descriptorpb.FieldDescriptorProto_TYPE_FIXED64,
 					descriptorpb.FieldDescriptorProto_TYPE_SFIXED32,
-					descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
-					descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+					descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
 					b.P(fmt.Sprintf("%s v;", fieldType))
 					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Default value must be omitted")
+					b.P("if (v == 0) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P()
+				case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+					b.P(fmt.Sprintf("%s v;", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
+					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Default value must be omitted")
+					b.P("if (v == false) {")
 					b.Indent()
 					b.P("return (false, pos);")
 					b.Unindent()
@@ -790,12 +849,28 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("}")
 					b.P()
 
+					b.P("// Default value must be omitted")
+					b.P("if (bytes(v).length == 0) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 					b.P()
 				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 					b.P("uint64 len;")
 					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
+					b.Indent()
+					b.P("return (false, pos);")
+					b.Unindent()
+					b.P("}")
+					b.P()
+
+					b.P("// Default value must be omitted")
+					b.P("if (len == 0) {")
 					b.Indent()
 					b.P("return (false, pos);")
 					b.Unindent()
