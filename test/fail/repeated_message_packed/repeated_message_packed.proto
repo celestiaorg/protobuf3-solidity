@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message OtherMessage {
+  uint64 other_field = 1;
+}
+
+message Message {
+  repeated OtherMessage repeated_othermessage = 1 [packed = true];
+}

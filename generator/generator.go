@@ -214,6 +214,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				}
 			} else {
 				if isFieldPacked(field) {
+					// Note: protoc enforces repeated messages can't be packed
 					return errors.New("repeated message field must not be packed: " + structName + "." + fieldName)
 				}
 				// Solidity doesn't allow arrays of strings or bytes
