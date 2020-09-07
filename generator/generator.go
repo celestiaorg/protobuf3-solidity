@@ -765,6 +765,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P()
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING:
 					b.P(fmt.Sprintf("%s memory v;", fieldType))
 					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
@@ -776,6 +777,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
+					b.P()
 				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 					b.P("uint64 len;")
 					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
@@ -792,6 +794,9 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
 					b.Unindent()
 					b.P("}")
+					b.P()
+
+					b.P("pos = pos + len;")
 					b.P()
 				default:
 					return errors.New("unsupported field type: " + fieldDescriptorType.String())
