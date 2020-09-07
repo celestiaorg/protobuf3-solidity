@@ -206,6 +206,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		}
 		fieldCount++
 
+		// Forbid oneof
+		if field.OneofIndex != nil {
+			return errors.New("oneof fields are forbidden: " + structName + "." + fieldName)
+		}
+
 		arrayStr := ""
 		if isFieldRepeated(field) {
 			if isPrimitiveNumericType(fieldDescriptorType) {
