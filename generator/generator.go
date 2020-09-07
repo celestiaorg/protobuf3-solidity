@@ -263,7 +263,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.Indent()
 
 	// Top-level decoder function
-	b.P(fmt.Sprintf("function decode(uint256 initial_pos, bytes memory buf, uint64 len) internal pure returns (bool, uint256, %s memory) {", structName))
+	b.P(fmt.Sprintf("function decode(uint64 initial_pos, bytes memory buf, uint64 len) internal pure returns (bool, uint64, %s memory) {", structName))
 	b.Indent()
 
 	b.P("// Message instance")
@@ -271,7 +271,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P("// Previous field number")
 	b.P("uint64 previous_field_number = 0;")
 	b.P("// Current position in the buffer")
-	b.P("uint256 pos = initial_pos;")
+	b.P("uint64 pos = initial_pos;")
 	b.P()
 
 	b.P("// Sanity checks")
@@ -369,9 +369,9 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P()
 
 	// Decode field dispatcher function
-	b.P(fmt.Sprintf("function decode_field(uint256 initial_pos, bytes memory buf, uint64 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint256) {", structName))
+	b.P(fmt.Sprintf("function decode_field(uint64 initial_pos, bytes memory buf, uint64 len, uint64 field_number, %s memory instance) internal pure returns (bool, uint64) {", structName))
 	b.Indent()
-	b.P("uint256 pos = initial_pos;")
+	b.P("uint64 pos = initial_pos;")
 	b.P()
 
 	for _, field := range fields {
@@ -404,7 +404,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		fieldDescriptorType := field.GetType()
 		fieldNumber := field.GetNumber()
 
-		b.P(fmt.Sprintf("function decode_%d(uint256 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint256) {", fieldNumber, structName))
+		b.P(fmt.Sprintf("function decode_%d(uint64 pos, bytes memory buf, %s memory instance) internal pure returns (bool, uint64) {", fieldNumber, structName))
 		b.Indent()
 
 		b.P("bool success;")
@@ -433,7 +433,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("}")
 					b.P()
 
-					b.P("uint256 initial_pos = pos;")
+					b.P("uint64 initial_pos = pos;")
 					b.P()
 
 					b.P("// Sanity checks")
@@ -445,7 +445,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Do one pass to count the number of elements")
-					b.P("uint256 cnt = 0;")
+					b.P("uint64 cnt = 0;")
 					b.P("while (pos - initial_pos < len) {")
 					b.Indent()
 					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
@@ -464,7 +464,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Now actually parse the elements")
-					b.P("for (uint256 i = 0; i < cnt; i++) {")
+					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
 					b.P("(success, pos, int32 v) = decode_enum(pos, buf);")
 					b.P("if (!success) {")
@@ -510,7 +510,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("}")
 					b.P()
 
-					b.P("uint256 initial_pos = pos;")
+					b.P("uint64 initial_pos = pos;")
 					b.P()
 
 					b.P("// Sanity checks")
@@ -522,7 +522,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Do one pass to count the number of elements")
-					b.P("uint256 cnt = 0;")
+					b.P("uint64 cnt = 0;")
 					b.P("while (pos - initial_pos < len) {")
 					b.Indent()
 					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
@@ -541,7 +541,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P("// Now actually parse the elements")
-					b.P("for (uint256 i = 0; i < cnt; i++) {")
+					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
 					b.P(fmt.Sprintf("(success, pos, %s v) = decode_%s(pos, buf);", fieldType, fieldType))
 					b.P("if (!success) {")
@@ -572,11 +572,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					return err
 				}
 
-				b.P("uint256 initial_pos = pos;")
+				b.P("uint64 initial_pos = pos;")
 				b.P()
 
 				b.P("// Do one pass to count the number of elements")
-				b.P("uint256 cnt = 0;")
+				b.P("uint64 cnt = 0;")
 				b.P("while (pos  < buf.length) {")
 				b.Indent()
 				b.P("(success, pos, uint64 len) = decode_embedded_message(pos, buf);")
@@ -624,7 +624,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 				b.P("// Now actually parse the elements")
 				b.P("pos = initial_pos;")
-				b.P("for (uint256 i = 0; i < cnt; i++) {")
+				b.P("for (uint64 i = 0; i < cnt; i++) {")
 				b.Indent()
 				b.P("(success, pos, uint64 nestedLen) = decode_embedded_message(pos, buf);")
 				b.P("if (!success) {")
@@ -754,7 +754,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P()
 
 					b.P(fmt.Sprintf("instance.%s = new bytes(len);", fieldName))
-					b.P("for (uint256 i = 0; i < len; i++) {")
+					b.P("for (uint64 i = 0; i < len; i++) {")
 					b.Indent()
 					b.P(fmt.Sprintf("instance.%s[i] = buf[pos + i];", fieldName))
 					b.Unindent()
