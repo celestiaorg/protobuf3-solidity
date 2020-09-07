@@ -239,7 +239,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 			// Convert protobuf field type to Solidity native type
 			fieldType, err := typeToSol(fieldDescriptorType)
 			if err != nil {
-				return err
+				return errors.New(err.Error() + ": " + structName + "." + fieldName)
 			}
 
 			b.P(fmt.Sprintf("%s%s %s;", fieldType, arrayStr, fieldName))
@@ -494,7 +494,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 					fieldType, err := typeToSol(fieldDescriptorType)
 					if err != nil {
-						return err
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
 					}
 
 					b.P(fmt.Sprintf("(success, pos, uint64 len) = decode_length_delimited(pos, buf);"))
@@ -705,7 +705,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 			default:
 				fieldType, err := typeToSol(fieldDescriptorType)
 				if err != nil {
-					return err
+					return errors.New(err.Error() + ": " + structName + "." + fieldName)
 				}
 
 				switch fieldDescriptorType {
@@ -866,7 +866,7 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 		s = "bytes"
 	default:
-		return "", errors.New("unsupported field type: " + fType.String())
+		return "", errors.New("unsupported field type " + fType.String())
 	}
 
 	err := checkKeyword(s)
