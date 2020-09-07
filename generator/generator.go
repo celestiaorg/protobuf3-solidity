@@ -508,6 +508,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					if err != nil {
 						return errors.New(err.Error() + ": " + structName + "." + fieldName)
 					}
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
 
 					b.P("uint64 len;")
 					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_length_delimited(pos, buf);"))
@@ -534,7 +538,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("while (pos - initial_pos < len) {")
 					b.Indent()
 					b.P(fmt.Sprintf("%s v;", fieldType))
-					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -553,7 +557,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P("for (uint64 i = 0; i < cnt; i++) {")
 					b.Indent()
 					b.P(fmt.Sprintf("%s v;", fieldType))
-					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -733,6 +737,10 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				if err != nil {
 					return errors.New(err.Error() + ": " + structName + "." + fieldName)
 				}
+				fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+				if err != nil {
+					return errors.New(err.Error() + ": " + structName + "." + fieldName)
+				}
 
 				switch fieldDescriptorType {
 				case descriptorpb.FieldDescriptorProto_TYPE_INT32,
@@ -747,7 +755,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					descriptorpb.FieldDescriptorProto_TYPE_SFIXED64,
 					descriptorpb.FieldDescriptorProto_TYPE_BOOL:
 					b.P(fmt.Sprintf("%s v;", fieldType))
-					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -758,7 +766,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING:
 					b.P(fmt.Sprintf("%s memory v;", fieldType))
-					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, v) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -769,7 +777,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 					b.P(fmt.Sprintf("instance.%s = v;", fieldName))
 				case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 					b.P("uint64 len;")
-					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_%s(pos, buf);", fieldType))
+					b.P(fmt.Sprintf("(success, pos, len) = ProtobufLib.decode_%s(pos, buf);", fieldDecodeType))
 					b.P("if (!success) {")
 					b.Indent()
 					b.P("return (false, pos);")
@@ -886,6 +894,48 @@ func typeToSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
 		s = "int32"
 	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
 		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+		s = "bool"
+	case descriptorpb.FieldDescriptorProto_TYPE_STRING:
+		s = "string"
+	case descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+		s = "bytes"
+	default:
+		return "", errors.New("unsupported field type " + fType.String())
+	}
+
+	err := checkKeyword(s)
+	if err != nil {
+		return s, err
+	}
+
+	return s, nil
+}
+
+func typeToDecodeSol(fType descriptorpb.FieldDescriptorProto_Type) (string, error) {
+	s := ""
+
+	switch fType {
+	case descriptorpb.FieldDescriptorProto_TYPE_INT32:
+		s = "int32"
+	case descriptorpb.FieldDescriptorProto_TYPE_INT64:
+		s = "int64"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT32:
+		s = "uint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_UINT64:
+		s = "uint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT32:
+		s = "sint32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SINT64:
+		s = "sint64"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED32:
+		s = "fixed32"
+	case descriptorpb.FieldDescriptorProto_TYPE_FIXED64:
+		s = "fixed64"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED32:
+		s = "sfixed32"
+	case descriptorpb.FieldDescriptorProto_TYPE_SFIXED64:
+		s = "sfixed64"
 	case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
 		s = "bool"
 	case descriptorpb.FieldDescriptorProto_TYPE_STRING:
