@@ -1,0 +1,1 @@
+../../test/pass/all_features/all_features.proto.sol
