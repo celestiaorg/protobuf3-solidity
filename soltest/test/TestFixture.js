@@ -47,7 +47,7 @@ contract("TestFixture", async (accounts) => {
         console.log(decoded);
         assert.equal(success, true);
 
-        // await instance.decode("0x" + encoded);
+        await instance.decode("0x" + encoded);
       });
     });
   });
