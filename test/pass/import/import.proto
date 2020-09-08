@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "imported.proto";
 
-message Message {
+message ImportMessage {
   uint64 field = 1;
   ImportedEnum imported_enum = 2;
   ImportedMessage imported_message = 3;
