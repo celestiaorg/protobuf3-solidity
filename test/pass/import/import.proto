@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+import "imported.proto";
+
+message Message {
+  uint64 field = 1;
+  ImportedMessage imported_field = 2;
+}
