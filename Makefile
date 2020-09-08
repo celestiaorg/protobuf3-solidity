@@ -29,7 +29,7 @@ test-protoc-check:
 	$(PROTOC) --version > /dev/null
 
 $(TESTS_PASSING): build
-	$(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ $@/*.proto;
+	$(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ -I $@ $@/*.proto;
 
 $(TESTS_FAILING): build
-	! $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ $@/*.proto;
+	! $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0:$@ -I $@ $@/*.proto;

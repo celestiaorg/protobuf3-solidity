@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "bottom.proto";
+
+message ImportMessage {
+  uint64 field = 1;
+  ImportedEnum imported_enum = 2;
+  ImportedMessage imported_message = 3;
+}

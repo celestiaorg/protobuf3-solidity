@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+enum ImportedEnum {
+  ZERO = 0;
+  ONE = 1;
+}
+
+message ImportedMessage {
+  uint64 field = 1;
+}

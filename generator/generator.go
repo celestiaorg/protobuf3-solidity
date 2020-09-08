@@ -101,7 +101,11 @@ func (g *Generator) generateFile(protoFile *descriptorpb.FileDescriptorProto) (*
 	b.P(SolidityABIString)
 	b.P()
 
+	// Generate imports
 	b.P("import \"@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol\";")
+	for _, dependency := range protoFile.GetDependency() {
+		b.P(fmt.Sprintf("import \"./%s.sol\";", dependency))
+	}
 	b.P()
 
 	// Generate enums

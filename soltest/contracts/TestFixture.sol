@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol";
 import "./all_features.proto.sol";
+import "./top.proto.sol";
 
 contract TestFixture {
     // Functions are not pure so that we can measure gas
