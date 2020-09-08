@@ -4,5 +4,6 @@ import "imported.proto";
 
 message Message {
   uint64 field = 1;
-  ImportedMessage imported_field = 2;
+  ImportedEnum imported_enum = 2;
+  ImportedMessage imported_message = 3;
 }
