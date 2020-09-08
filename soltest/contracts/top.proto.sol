@@ -1,0 +1,1 @@
+../../test/pass/import/top.proto.sol
