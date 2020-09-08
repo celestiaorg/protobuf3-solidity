@@ -931,8 +931,48 @@ func checkSyntaxVersion(v string) error {
 }
 
 func checkKeyword(w string) error {
+	// https://solidity.readthedocs.io/en/v0.6.12/cheatsheet.html
+
 	switch w {
-	case "after",
+	case
+		// Global Variables
+		"abi",
+		"block",
+		"gasleft",
+		"msg",
+		"now",
+		"tx",
+		"assert",
+		"require",
+		"revert",
+		"blockhash",
+		"keccak256",
+		"sha256",
+		"ripemd160",
+		"ecrecover",
+		"addmod",
+		"mulmod",
+		"this",
+		"super",
+		"selfdestruct",
+		"type",
+		// Function Visibility Specifiers
+		"public",
+		"private",
+		"external",
+		"internal",
+		// Modifiers
+		"pure",
+		"view",
+		"payable",
+		"constant",
+		"immutable",
+		"anonymous",
+		"indexed",
+		"virtual",
+		"override",
+		// Reserved Keywords
+		"after",
 		"alias",
 		"apply",
 		"auto",
@@ -941,7 +981,6 @@ func checkKeyword(w string) error {
 		"default",
 		"define",
 		"final",
-		"immutable",
 		"implements",
 		"in",
 		"inline",
