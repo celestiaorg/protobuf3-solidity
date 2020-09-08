@@ -31,6 +31,8 @@ The below protobuf file shows all supported features of this plugin.
 ```protobuf
 syntax = "proto3";
 
+// import is supported but not shown here
+
 enum OtherEnum {
   UNSPECIFIED = 0;
   ONE = 1;
@@ -83,11 +85,9 @@ message Message {
 1. repeated `string` and `bytes` - Solidity does not support arrays of `string` or `bytes`. Workaround: wrap the field in a `message`.
 1. nested `enum` or `message` definitions - All `enum` and `message` definitions must be top-level.
 1. `float` and `double` - Solidity does not support floating-point numbers.
-1. `package` - Currently unsupported.
-1. `import` - Currently unsupported, undefined behavior.
-1. multiple files - Currently unsupported, undefined behavior.
 1. `oneof` - Solidity does not support unions.
 1. `map` - Maps are forbidden as per [ADR-027](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-027-deterministic-protobuf-serialization.md).
+1. `package` - Scoping currently unsupported, including in `import`s.
 
 ## Building from source
 
