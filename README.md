@@ -1,8 +1,9 @@
 # protobuf3-solidity
 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/lazyledger/protobuf3-solidity)
-![Go and Node.js Tests](https://github.com/lazyledger/protobuf3-solidity/workflows/Go%20and%20Node.js%20Tests/badge.svg)
-![GitHub](https://img.shields.io/github/license/lazyledger/protobuf3-solidity)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/lazyledger/protobuf3-solidity)](https://github.com/lazyledger/protobuf3-solidity/releases)
+[![Go and Node.js Tests](https://github.com/lazyledger/protobuf3-solidity/workflows/Go%20and%20Node.js%20Tests/badge.svg)](https://github.com/lazyledger/protobuf3-solidity/actions?query=workflow%3A%22Go+and+Node.js+Tests%22)
+[![GitHub](https://img.shields.io/github/license/lazyledger/protobuf3-solidity)](https://github.com/lazyledger/protobuf3-solidity/blob/master/LICENSE)
 
 A [protobuf3](https://developers.google.com/protocol-buffers) code generator plugin for [Solidity](https://github.com/ethereum/solidity). Decode and encode protobuf messages in your Solidity contract! Leverages the [protobuf3-solidity-lib](https://github.com/lazyledger/protobuf3-solidity-lib) codec library.
 
