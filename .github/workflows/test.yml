@@ -7,11 +7,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install protoc
-        run: |
-          wget https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip
-          unzip protoc-3.11.4-linux-x86_64.zip bin/protoc
-
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
@@ -29,6 +24,11 @@ jobs:
 
       - name: Go build
         run: make
+
+      - name: Install protoc
+        run: |
+          wget https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip
+          unzip protoc-3.11.4-linux-x86_64.zip bin/protoc
 
       - name: Go test protoc
         run: |
