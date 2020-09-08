@@ -1,6 +1,8 @@
 # protobuf3-solidity
 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/lazyledger/protobuf3-solidity)
+![Go and Node.js Tests](https://github.com/lazyledger/protobuf3-solidity/workflows/Go%20and%20Node.js%20Tests/badge.svg)
+![GitHub](https://img.shields.io/github/license/lazyledger/protobuf3-solidity)
 
 A [protobuf3](https://developers.google.com/protocol-buffers) code generator plugin for [Solidity](https://github.com/ethereum/solidity). Decode and encode protobuf messages in your Solidity contract! Leverages the [protobuf3-solidity-lib](https://github.com/lazyledger/protobuf3-solidity-lib) codec library.
 
@@ -74,7 +76,7 @@ message Message {
 **Rules to keep in mind:**
 1. Enum values must start at `0` and increment by `1`.
 1. Field numbers must start at `1` and increment by `1`.
-1. Repeated numeric types must currently explicitly specify `[packed = true]`.
+1. Repeated numeric types must explicitly specify `[packed = true]`.
 
 **Unsupported features**:
 1. repeated `string` and `bytes` - Solidity does not support arrays of `string` or `bytes`. Workaround: wrap the field in a `message`.
@@ -95,7 +97,7 @@ Build:
 make
 ```
 
-Test:
+Test (requires a [`protoc`](https://github.com/protocolbuffers/protobuf) binary in `PATH`):
 ```sh
 make test-protoc
 ```
