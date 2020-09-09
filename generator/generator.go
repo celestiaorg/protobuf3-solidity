@@ -991,6 +991,48 @@ func (g *Generator) generateMessageDecoder(structName string, fields []*descript
 
 // Generate encoder
 func (g *Generator) generateMessageEncoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
+	////////////////////////////////////
+	// Generate struct to hold encoded version of message struct
+	////////////////////////////////////
+
+	b.P(fmt.Sprintf("struct %s_Encoded {", structName))
+	b.Indent()
+
+	// Loop over fields
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
+
+			arrayStr := ""
+			if isFieldRepeated(field) {
+				arrayStr = "[]"
+			}
+
+			b.P(fmt.Sprintf("%s_Encoded%s %s;", fieldTypeName, arrayStr, fieldName))
+		default:
+			b.P(fmt.Sprintf("bytes %s;", fieldName))
+		}
+	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	////////////////////////////////////
+	// Actually generate encoder
+	////////////////////////////////////
+
 	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
