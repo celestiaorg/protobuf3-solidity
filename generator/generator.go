@@ -123,14 +123,6 @@ func (g *Generator) ParseParameters() error {
 				return err
 			}
 			g.generateFlag = flag
-
-			// TODO implement these
-			switch flag {
-			case
-				generateFlagDecoder,
-				generateFlagEncoder:
-				return fmt.Errorf("unimplemented feature %s", flag)
-			}
 		default:
 			return errors.New("unrecognized option " + key)
 		}
@@ -337,10 +329,23 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P("}")
 	b.P()
 
-	////////////////////////////////////
-	// Generate decoder
-	////////////////////////////////////
+	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagDecoder {
+		err = g.generateMessageDecoder(structName, fields, b)
+	}
 
+	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagEncoder {
+		err = g.generateMessageEncoder(structName, fields, b)
+	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	return nil
+}
+
+// Generate decoder
+func (g *Generator) generateMessageDecoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
 	b.P(fmt.Sprintf("library %sCodec {", structName))
 	b.Indent()
 
@@ -379,7 +384,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P()
 
 	b.P("// Check that the field number is within bounds")
-	b.P(fmt.Sprintf("if (field_number > %d) {", fieldCount))
+	b.P(fmt.Sprintf("if (field_number > %d) {", len(fields)))
 	b.Indent()
 	b.P("return (false, pos, instance);")
 	b.Unindent()
@@ -981,10 +986,11 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		b.P()
 	}
 
-	////////////////////////////////////
-	// Generate encoder
-	////////////////////////////////////
+	return nil
+}
 
+// Generate encoder
+func (g *Generator) generateMessageEncoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
 	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
@@ -992,10 +998,6 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 	b.Unindent()
 	b.P("}")
-
-	b.Unindent()
-	b.P("}")
-	b.P()
 
 	return nil
 }
