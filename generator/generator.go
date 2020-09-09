@@ -17,6 +17,53 @@ const SolidityVersionString = ">=0.6.0 <8.0.0"
 // SolidityABIString indicates ABIEncoderV2 use.
 const SolidityABIString = "pragma experimental ABIEncoderV2;"
 
+type compileFlag string
+
+const (
+	compileFlagLink    compileFlag = "link"
+	compileFlagCompile compileFlag = "compile"
+)
+
+func fromCompileFlag(f compileFlag) string {
+	return string(f)
+}
+
+func toCompileFlag(s string) (compileFlag, error) {
+	switch s {
+	case fromCompileFlag(compileFlagLink):
+		return compileFlagLink, nil
+	case fromCompileFlag(compileFlagCompile):
+		return compileFlagCompile, nil
+	}
+
+	return compileFlagCompile, fmt.Errorf("unknown compile flag %s, allowed values are <link, compile>", s)
+}
+
+type generateFlag string
+
+const (
+	generateFlagAll     generateFlag = "all"
+	generateFlagDecoder generateFlag = "decoder"
+	generateFlagEncoder generateFlag = "encoder"
+)
+
+func fromGenerateFlag(f generateFlag) string {
+	return string(f)
+}
+
+func toGenerateFlag(s string) (generateFlag, error) {
+	switch s {
+	case fromGenerateFlag(generateFlagAll):
+		return generateFlagAll, nil
+	case fromGenerateFlag(generateFlagDecoder):
+		return generateFlagDecoder, nil
+	case fromGenerateFlag(generateFlagEncoder):
+		return generateFlagEncoder, nil
+	}
+
+	return generateFlagAll, fmt.Errorf("unknown generate flag %s, allowed values are <all, decoder, encoder>", s)
+}
+
 // Generator generates Solidity code from .proto files.
 type Generator struct {
 	request   *pluginpb.CodeGeneratorRequest
@@ -24,6 +71,8 @@ type Generator struct {
 
 	versionString string
 	licenseString string
+	compileFlag   compileFlag
+	generateFlag  generateFlag
 }
 
 // New initializes a new Generator.
@@ -35,6 +84,9 @@ func New(request *pluginpb.CodeGeneratorRequest, versionString string) *Generato
 
 	g.versionString = versionString
 	g.licenseString = "CC0"
+
+	g.compileFlag = compileFlagCompile
+	g.generateFlag = generateFlagAll
 
 	return g
 }
@@ -53,6 +105,32 @@ func (g *Generator) ParseParameters() error {
 		switch key {
 		case "license":
 			g.licenseString = value
+		case "compile":
+			flag, err := toCompileFlag(value)
+			if err != nil {
+				return err
+			}
+			g.compileFlag = flag
+
+			// TODO implement these
+			switch flag {
+			case compileFlagLink:
+				return fmt.Errorf("unimplemented feature %s", flag)
+			}
+		case "generate":
+			flag, err := toGenerateFlag(value)
+			if err != nil {
+				return err
+			}
+			g.generateFlag = flag
+
+			// TODO implement these
+			switch flag {
+			case
+				generateFlagDecoder,
+				generateFlagEncoder:
+				return fmt.Errorf("unimplemented feature %s", flag)
+			}
 		default:
 			return errors.New("unrecognized option " + key)
 		}
