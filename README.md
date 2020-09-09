@@ -13,7 +13,10 @@ Serialization rules are stricter than default protobuf3 rules, and are specified
 
 Use as a `protoc` plugin:
 ```sh
-protoc --plugin protoc-gen-sol --sol_out [license=<license string>:]<output directory> <proto files>
+protoc \
+--plugin protoc-gen-sol \
+--sol_out [license=<license string>,compile=<link,inline>,generate=<all,decoder,encoder>:]<output directory> \
+<proto files>
 ```
 
 Examples:
@@ -24,6 +27,18 @@ protoc --plugin protoc-gen-sol --sol_out . foo.proto
 # Generate Solidity file with Apache-2.0 license identifier
 protoc --plugin protoc-gen-sol --sol_out license=Apache-2.0:. foo.proto
 ```
+
+### Parameters
+
+- `license`: default `CC0`
+  - any string is accepted, and the generated license comment will use the string as-is
+- `compile`: default `inline`
+  - `inline`: the generated library's functions will be inlined (`JUMP`)
+  - `link`: the generated library's functions will be linked (`DELEGATECALL`)
+- `generate`: default `all`
+  - `all`: both decoder and encoder will be generated
+  - `decoder`: only decoder will be generated
+  - `encoder`: only encoder will be generated
 
 ### Feature support
 
