@@ -839,6 +839,7 @@ func (g *Generator) generateMessageDecoder(structName string, fields []*descript
 				b.P(fmt.Sprintf("instance.%s = %s(v);", fieldName, fieldTypeName))
 				b.P()
 			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+				// TODO check for default value of empty message
 				fieldTypeName, err := toSolMessageOrEnumName(field)
 				if err != nil {
 					return err
@@ -1072,6 +1073,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 	b.Indent()
 
 	b.P(fmt.Sprintf("%s memory encodedInstance;", structNameEncoded))
+	b.P("uint64 len;")
 	b.P()
 
 	// Loop over fields
@@ -1104,8 +1106,29 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 			if isFieldRepeated(field) {
 				// Repeated numeric type
 
-				// fieldNameLength := fieldName + "__Length"
+				fieldNameLength := fieldName + "__Length"
 
+				b.P(fmt.Sprintf("// Encode %s if length non-zero", fieldName))
+				b.P(fmt.Sprintf("len = uint64(instance.%s.length);", fieldName))
+				b.P("if (len > 0) {")
+				b.Indent()
+
+				b.P("// Encode length")
+				b.P(fmt.Sprintf("encodedInstance.%s = encode_uint64(len);", fieldNameLength))
+
+				b.P(fmt.Sprintf("// Encode field %s", fieldName))
+				b.P("for (uint64 i = 0; i < len; i++) {")
+				b.Indent()
+
+				// TODO
+
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.Unindent()
+				b.P("}")
+				b.P()
 			} else {
 				// Non-repeated non-message (numeric, or string/bytes)
 
