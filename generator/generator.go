@@ -991,12 +991,14 @@ func (g *Generator) generateMessageDecoder(structName string, fields []*descript
 
 // Generate encoder
 func (g *Generator) generateMessageEncoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
-	structNameEncoded := structName + "_Encoded"
+	structNameEncoded := structName + "__Encoded"
+	structNameEncodedNested := structNameEncoded + "__Nested"
 
 	////////////////////////////////////
-	// Generate struct to hold encoded version of message struct
+	// Generate structs to hold encoded version of message struct
 	////////////////////////////////////
 
+	b.P("// Holds encoded version of message")
 	b.P(fmt.Sprintf("struct %s {", structNameEncoded))
 	b.Indent()
 
@@ -1015,18 +1017,41 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 			if err != nil {
 				return err
 			}
-			fieldTypeNameEncoded := fieldTypeName + "_Encoded"
+			fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
 
 			arrayStr := ""
 			if isFieldRepeated(field) {
 				arrayStr = "[]"
 			}
 
-			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncoded, arrayStr, fieldName))
+			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncodedNested, arrayStr, fieldName))
 		default:
+			// Add a field for the key
+			fieldNameKey := fieldName + "__Key"
+			b.P(fmt.Sprintf("bytes %s;", fieldNameKey))
+
+			// For repeated fields, add field for length in bytes
+			if isFieldRepeated(field) {
+				fieldNameLength := fieldName + "__Length"
+				b.P(fmt.Sprintf("bytes %s;", fieldNameLength))
+			}
+
 			b.P(fmt.Sprintf("bytes %s;", fieldName))
 		}
 	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	b.P("// Holds encoded version of nested message")
+	b.P(fmt.Sprintf("struct %s {", structNameEncodedNested))
+	b.Indent()
+
+	b.P("bytes key;")
+	b.P("bytes length;")
+	b.P(fmt.Sprintf("%s nestedInstance;", structNameEncoded))
+	b.P()
 
 	b.Unindent()
 	b.P("}")
@@ -1040,8 +1065,35 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 	b.Indent()
 
 	b.P(fmt.Sprintf("%s memory encoded;", structNameEncoded))
+	b.P()
 
-	b.P("revert(\"Unimplemented feature: encoding\");")
+	// Loop over fields
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
+			fieldTypeNameEncoded := fieldTypeName + "__Encoded"
+
+			arrayStr := ""
+			if isFieldRepeated(field) {
+				arrayStr = "[]"
+			}
+
+			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncoded, arrayStr, fieldName))
+		default:
+			b.P(fmt.Sprintf("bytes %s;", fieldName))
+		}
+	}
 
 	b.Unindent()
 	b.P("}")
