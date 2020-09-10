@@ -1089,12 +1089,31 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
 			// Message type
 
-			if isFieldRepeated(field) {
-				// Repeated messsage
+			fieldNumber := field.GetNumber()
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
 
+			if isFieldRepeated(field) {
+				// Repeated message
+
+				fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
+
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s = new %s(instance.%s.length);", fieldName, fieldTypeNameEncodedNested, fieldName))
+				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s[i] = %sCodec.encodeNested(%d, instance.%s[i]);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P()
 			} else {
 				// Non-repeated message
 
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s = %sCodec.encodeNested(%d, instance.%s);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.P()
 			}
 		default:
 			// Non-message type
