@@ -991,11 +991,13 @@ func (g *Generator) generateMessageDecoder(structName string, fields []*descript
 
 // Generate encoder
 func (g *Generator) generateMessageEncoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
+	structNameEncoded := structName + "_Encoded"
+
 	////////////////////////////////////
 	// Generate struct to hold encoded version of message struct
 	////////////////////////////////////
 
-	b.P(fmt.Sprintf("struct %s_Encoded {", structName))
+	b.P(fmt.Sprintf("struct %s {", structNameEncoded))
 	b.Indent()
 
 	// Loop over fields
@@ -1013,13 +1015,14 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 			if err != nil {
 				return err
 			}
+			fieldTypeNameEncoded := fieldTypeName + "_Encoded"
 
 			arrayStr := ""
 			if isFieldRepeated(field) {
 				arrayStr = "[]"
 			}
 
-			b.P(fmt.Sprintf("%s_Encoded%s %s;", fieldTypeName, arrayStr, fieldName))
+			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncoded, arrayStr, fieldName))
 		default:
 			b.P(fmt.Sprintf("bytes %s;", fieldName))
 		}
@@ -1035,6 +1038,8 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
+
+	b.P(fmt.Sprintf("%s memory encoded;", structNameEncoded))
 
 	b.P("revert(\"Unimplemented feature: encoding\");")
 
