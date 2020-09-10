@@ -1113,19 +1113,55 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				b.P("if (len > 0) {")
 				b.Indent()
 
+				b.P("// Encode key")
+				wireStr, err := toSolWireType(field)
+				if err != nil {
+					return err
+				}
+				b.P(fmt.Sprintf("encodedInstance.%s = encode_key(%d, uint64(%s));", fieldNameKey, fieldNumber, wireStr))
+				b.P()
+
 				b.P("// Encode length")
 				b.P(fmt.Sprintf("encodedInstance.%s = encode_uint64(len);", fieldNameLength))
+				b.P()
 
-				b.P(fmt.Sprintf("// Encode field %s", fieldName))
+				b.P("// Allocate enough bytes for len up-to-10-byte varints")
+				b.P("bytes memory temp = new bytes(len * 10);")
+				b.P("uint64 tempLength = 0;")
 				b.P("for (uint64 i = 0; i < len; i++) {")
 				b.Indent()
 
-				// TODO
+				b.P("// Encode each element in the array and append it to temp")
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+					b.P(fmt.Sprintf("bytes memory tempElement = encode_int32(int32(instance.%s[i]));", fieldName))
+				default:
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
+					b.P(fmt.Sprintf("bytes memory tempElement = encode_%s(instance.%s[i]);", fieldDecodeType, fieldName))
+				}
+				b.P("for (uint64 j = 0; j < tempElement; j++) {")
+				b.Indent()
+				b.P("temp[tempLength++] = tempElement[j];")
+				b.Unindent()
+				b.P("}")
 
 				b.Unindent()
 				b.P("}")
 				b.P()
 
+				b.P("// Allocate just enough bytes and copy temp bytes over")
+				b.P("bytes memory encodedBytes = new bytes(tempLength);")
+				b.P("for (uint64 i = 0; i < encoded.length; i++) {")
+				b.Indent()
+				b.P("encodedBytes[i] = temp[i];")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("encodedInstance.%s = encodedBytes;", fieldName))
 				b.Unindent()
 				b.P("}")
 				b.P()
