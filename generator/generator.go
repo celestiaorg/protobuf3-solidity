@@ -329,12 +329,21 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P("}")
 	b.P()
 
+	b.P(fmt.Sprintf("library %sCodec {", structName))
+	b.Indent()
+
 	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagDecoder {
 		err = g.generateMessageDecoder(structName, fields, b)
+		if err != nil {
+			return err
+		}
 	}
 
 	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagEncoder {
 		err = g.generateMessageEncoder(structName, fields, b)
+		if err != nil {
+			return err
+		}
 	}
 
 	b.Unindent()
@@ -346,9 +355,6 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 
 // Generate decoder
 func (g *Generator) generateMessageDecoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
-	b.P(fmt.Sprintf("library %sCodec {", structName))
-	b.Indent()
-
 	// Top-level decoder function
 	b.P(fmt.Sprintf("function decode(uint64 initial_pos, bytes memory buf, uint64 len) internal pure returns (bool, uint64, %s memory) {", structName))
 	b.Indent()
@@ -1030,8 +1036,10 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 			fieldNameKey := fieldName + "__Key"
 			b.P(fmt.Sprintf("bytes %s;", fieldNameKey))
 
-			// For repeated fields, add field for length in bytes
-			if isFieldRepeated(field) {
+			// For repeated and length-delimited fields, add field for length in bytes
+			if isFieldRepeated(field) ||
+				fieldDescriptorType == descriptorpb.FieldDescriptorProto_TYPE_STRING ||
+				fieldDescriptorType == descriptorpb.FieldDescriptorProto_TYPE_BYTES {
 				fieldNameLength := fieldName + "__Length"
 				b.P(fmt.Sprintf("bytes %s;", fieldNameLength))
 			}
@@ -1051,7 +1059,6 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 	b.P("bytes key;")
 	b.P("bytes length;")
 	b.P(fmt.Sprintf("%s nestedInstance;", structNameEncoded))
-	b.P()
 
 	b.Unindent()
 	b.P("}")
@@ -1064,7 +1071,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
-	b.P(fmt.Sprintf("%s memory encoded;", structNameEncoded))
+	b.P(fmt.Sprintf("%s memory encodedInstance;", structNameEncoded))
 	b.P()
 
 	// Loop over fields
@@ -1078,25 +1085,75 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 		switch fieldDescriptorType {
 		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
-			fieldTypeName, err := toSolMessageOrEnumName(field)
-			if err != nil {
-				return err
-			}
-			fieldTypeNameEncoded := fieldTypeName + "__Encoded"
+			// Message type
 
-			arrayStr := ""
 			if isFieldRepeated(field) {
-				arrayStr = "[]"
-			}
+				// Repeated messsage
 
-			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncoded, arrayStr, fieldName))
+			} else {
+				// Non-repeated message
+
+			}
 		default:
-			b.P(fmt.Sprintf("bytes %s;", fieldName))
+			// Non-message type
+
+			fieldNumber := field.GetNumber()
+			fieldNameKey := fieldName + "__Key"
+			fieldNameLength := fieldName + "__Length"
+
+			if isFieldRepeated(field) {
+				// Repeated numeric type
+
+				// fieldNameLength := fieldName + "__Length"
+
+			} else {
+				// Non-repeated non-message (numeric, or string/bytes)
+
+				b.P(fmt.Sprintf("// Omit encoding %s if default value", fieldName))
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					b.P(fmt.Sprintf("if (bytes(instance.%s).length > 0) {", fieldName))
+				default:
+					b.P(fmt.Sprintf("if (uint64(instance.%s) != 0) {", fieldName))
+				}
+				b.Indent()
+
+				b.P(fmt.Sprintf("// Encode key for %s", fieldName))
+				wireStr, err := toSolWireType(field)
+				if err != nil {
+					return err
+				}
+				b.P(fmt.Sprintf("encodedInstance.%s = encode_key(%d, uint64(%s));", fieldNameKey, fieldNumber, wireStr))
+
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					b.P(fmt.Sprintf("encodedInstance.%s = encode_uint64(bytes(instance.%s).length);", fieldNameLength, fieldName))
+					b.P(fmt.Sprintf("encodedInstance.%s = bytes(instance.%s);", fieldName, fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+					b.P(fmt.Sprintf("encodedInstance.%s = encode_int32(int32(instance.%s));", fieldName, fieldName))
+				default:
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
+					b.P(fmt.Sprintf("encodedInstance.%s = encode_%s(instance.%s);", fieldName, fieldDecodeType, fieldName))
+				}
+
+				b.Unindent()
+				b.P("}")
+				b.P()
+			}
 		}
 	}
 
+	b.P("return abi.encodePacked(encodedInstance);")
+
 	b.Unindent()
 	b.P("}")
+	b.P()
 
 	return nil
 }
