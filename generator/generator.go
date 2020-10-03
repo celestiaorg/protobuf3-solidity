@@ -1262,8 +1262,10 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 		}
 	}
 
-	b.P("return abi.encodePacked(")
-	b.Indent()
+	// We can't use abi.encodePacked here because of EVM stack limits
+	b.P("bytes memory finalEncoded;")
+	b.P("index = 0;")
+	b.P("len = 0;")
 	for _, field := range fields {
 		fieldDescriptorType := field.GetType()
 		fieldName := field.GetName()
@@ -1275,16 +1277,46 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 		switch fieldDescriptorType {
 		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
 			// Message type
-			b.P(fmt.Sprintf("encodedInstance.%s__Encoded,", fieldName))
+			b.P(fmt.Sprintf("len += uint64(encodedInstance.%s__Encoded.length);", fieldName))
 		default:
 			// Non-message type
-			b.P(fmt.Sprintf("encodedInstance.%s,", fieldName))
+			b.P(fmt.Sprintf("len += uint64(encodedInstance.%s.length);", fieldName))
 		}
 	}
-	b.P("new bytes(0)")
-	b.Unindent()
-	b.P(");")
+	b.P("finalEncoded = new bytes(len);")
+	b.P()
 
+	b.P("uint64 j;")
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Message type
+			b.P("j = 0;")
+			b.P(fmt.Sprintf("while (j < encodedInstance.%s__Encoded.length) {", fieldName))
+			b.Indent()
+			b.P(fmt.Sprintf("finalEncoded[index++] = encodedInstance.%s__Encoded[j];", fieldName))
+			b.Unindent()
+			b.P("}")
+		default:
+			// Non-message type
+			b.P("j = 0;")
+			b.P(fmt.Sprintf("while (j < encodedInstance.%s.length) {", fieldName))
+			b.Indent()
+			b.P(fmt.Sprintf("finalEncoded[index++] = encodedInstance.%s[j];", fieldName))
+			b.Unindent()
+			b.P("}")
+		}
+	}
+	b.P()
+
+	b.P("return finalEncoded;")
 	b.Unindent()
 	b.P("}")
 	b.P()
