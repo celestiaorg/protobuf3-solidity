@@ -15,7 +15,7 @@ contract TestFixture {
         return (success, instance);
     }
 
-    function encode(Message memory instance) public returns (bytes memory) {
-        return MessageCodec.encode(instance);
-    }
+    // function encode(Message memory instance) public returns (bytes memory) {
+    //     return MessageCodec.encode(instance);
+    // }
 }
