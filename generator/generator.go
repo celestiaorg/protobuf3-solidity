@@ -86,7 +86,7 @@ func New(request *pluginpb.CodeGeneratorRequest, versionString string) *Generato
 	g.licenseString = "CC0"
 
 	g.compileFlag = compileFlagCompile
-	g.generateFlag = generateFlagAll
+	g.generateFlag = generateFlagDecoder
 
 	return g
 }

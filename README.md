@@ -35,10 +35,10 @@ protoc --plugin protoc-gen-sol --sol_out license=Apache-2.0:. foo.proto
 - `compile`: default `inline`
   - `inline`: the generated library's functions will be inlined (`JUMP`)
   - `link`: the generated library's functions will be linked (`DELEGATECALL`)
-- `generate`: default `all`
+- `generate`: default `decoder`
   - `all`: both decoder and encoder will be generated
   - `decoder`: only decoder will be generated
-  - `encoder`: only encoder will be generated
+  - `encoder`: only encoder will be generated (experimental!)
 
 ### Feature support
 
