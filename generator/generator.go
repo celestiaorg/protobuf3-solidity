@@ -86,7 +86,7 @@ func New(request *pluginpb.CodeGeneratorRequest, versionString string) *Generato
 	g.licenseString = "CC0"
 
 	g.compileFlag = compileFlagCompile
-	g.generateFlag = generateFlagAll
+	g.generateFlag = generateFlagDecoder
 
 	return g
 }
@@ -123,14 +123,6 @@ func (g *Generator) ParseParameters() error {
 				return err
 			}
 			g.generateFlag = flag
-
-			// TODO implement these
-			switch flag {
-			case
-				generateFlagDecoder,
-				generateFlagEncoder:
-				return fmt.Errorf("unimplemented feature %s", flag)
-			}
 		default:
 			return errors.New("unrecognized option " + key)
 		}
@@ -337,13 +329,32 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P("}")
 	b.P()
 
-	////////////////////////////////////
-	// Generate decoder
-	////////////////////////////////////
-
 	b.P(fmt.Sprintf("library %sCodec {", structName))
 	b.Indent()
 
+	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagDecoder {
+		err = g.generateMessageDecoder(structName, fields, b)
+		if err != nil {
+			return err
+		}
+	}
+
+	if g.generateFlag == generateFlagAll || g.generateFlag == generateFlagEncoder {
+		err = g.generateMessageEncoder(structName, fields, b)
+		if err != nil {
+			return err
+		}
+	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	return nil
+}
+
+// Generate decoder
+func (g *Generator) generateMessageDecoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
 	// Top-level decoder function
 	b.P(fmt.Sprintf("function decode(uint64 initial_pos, bytes memory buf, uint64 len) internal pure returns (bool, uint64, %s memory) {", structName))
 	b.Indent()
@@ -379,7 +390,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 	b.P()
 
 	b.P("// Check that the field number is within bounds")
-	b.P(fmt.Sprintf("if (field_number > %d) {", fieldCount))
+	b.P(fmt.Sprintf("if (field_number > %d) {", len(fields)))
 	b.Indent()
 	b.P("return (false, pos, instance);")
 	b.Unindent()
@@ -828,6 +839,7 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 				b.P(fmt.Sprintf("instance.%s = %s(v);", fieldName, fieldTypeName))
 				b.P()
 			case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+				// TODO check for default value of empty message
 				fieldTypeName, err := toSolMessageOrEnumName(field)
 				if err != nil {
 					return err
@@ -981,18 +993,358 @@ func (g *Generator) generateMessage(descriptor *descriptorpb.DescriptorProto, b 
 		b.P()
 	}
 
+	return nil
+}
+
+// Generate encoder
+func (g *Generator) generateMessageEncoder(structName string, fields []*descriptorpb.FieldDescriptorProto, b *WriteableBuffer) error {
+	structNameEncoded := structName + "__Encoded"
+	structNameEncodedNested := structNameEncoded + "__Nested"
+
 	////////////////////////////////////
-	// Generate encoder
+	// Generate structs to hold encoded version of message struct
+	////////////////////////////////////
+
+	b.P("// Holds encoded version of message")
+	b.P(fmt.Sprintf("struct %s {", structNameEncoded))
+	b.Indent()
+
+	// Loop over fields
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
+			fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
+
+			arrayStr := ""
+			if isFieldRepeated(field) {
+				arrayStr = "[]"
+			}
+
+			b.P(fmt.Sprintf("%sCodec.%s%s %s;", fieldTypeName, fieldTypeNameEncodedNested, arrayStr, fieldName))
+
+			// Add a field for encoded version of nested message
+			b.P(fmt.Sprintf("bytes %s__Encoded;", fieldName))
+		default:
+			// Add a field for the key
+			fieldNameKey := fieldName + "__Key"
+			b.P(fmt.Sprintf("bytes %s;", fieldNameKey))
+
+			// For repeated and length-delimited fields, add field for length in bytes
+			if isFieldRepeated(field) ||
+				fieldDescriptorType == descriptorpb.FieldDescriptorProto_TYPE_STRING ||
+				fieldDescriptorType == descriptorpb.FieldDescriptorProto_TYPE_BYTES {
+				fieldNameLength := fieldName + "__Length"
+				b.P(fmt.Sprintf("bytes %s;", fieldNameLength))
+			}
+
+			b.P(fmt.Sprintf("bytes %s;", fieldName))
+		}
+	}
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	b.P("// Holds encoded version of nested message")
+	b.P(fmt.Sprintf("struct %s {", structNameEncodedNested))
+	b.Indent()
+
+	b.P("bytes key;")
+	b.P("bytes length;")
+	b.P("bytes nestedInstance;")
+
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	////////////////////////////////////
+	// Generate encoder for non-nested message
 	////////////////////////////////////
 
 	b.P(fmt.Sprintf("function encode(%s memory instance) internal pure returns (bytes memory) {", structName))
 	b.Indent()
 
-	b.P("revert(\"Unimplemented feature: encoding\");")
+	b.P(fmt.Sprintf("%s memory encodedInstance;", structNameEncoded))
+	b.P("uint64 len;")
+	b.P("uint64 index;")
+	b.P()
 
+	// Loop over fields
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Message type
+
+			fieldNumber := field.GetNumber()
+			fieldTypeName, err := toSolMessageOrEnumName(field)
+			if err != nil {
+				return err
+			}
+
+			if isFieldRepeated(field) {
+				// Repeated message
+
+				fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
+
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				b.P("len = 0;")
+				b.P(fmt.Sprintf("encodedInstance.%s = new %sCodec.%s[](instance.%s.length);", fieldName, fieldTypeName, fieldTypeNameEncodedNested, fieldName))
+				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s[i] = %sCodec.encodeNested(%d, instance.%s[i]);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.P(fmt.Sprintf("len += uint64(encodedInstance.%s[i].key.length + encodedInstance.%s[i].length.length + encodedInstance.%s[i].nestedInstance.length);", fieldName, fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded = new bytes(len);", fieldName))
+				b.P("index = 0;")
+				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
+				b.Indent()
+				b.P("uint64 j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].key.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].key[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P("j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].length.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].length[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P("j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].nestedInstance.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].nestedInstance[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.Unindent()
+				b.P("}")
+				b.P()
+			} else {
+				// Non-repeated message
+
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s = %sCodec.encodeNested(%d, instance.%s);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded = abi.encodePacked(encodedInstance.%s.key, encodedInstance.%s.length, encodedInstance.%s.nestedInstance);", fieldName, fieldName, fieldName, fieldName))
+				b.P()
+			}
+		default:
+			// Non-message type
+
+			fieldNumber := field.GetNumber()
+			fieldNameKey := fieldName + "__Key"
+			fieldNameLength := fieldName + "__Length"
+
+			if isFieldRepeated(field) {
+				// Repeated numeric type
+
+				fieldNameLength := fieldName + "__Length"
+
+				b.P(fmt.Sprintf("// Encode %s if length non-zero", fieldName))
+				b.P(fmt.Sprintf("len = uint64(instance.%s.length);", fieldName))
+				b.P("if (len > 0) {")
+				b.Indent()
+
+				b.P("// Encode key")
+				wireStr, err := toSolWireType(field)
+				if err != nil {
+					return err
+				}
+				b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_key(%d, uint64(%s));", fieldNameKey, fieldNumber, wireStr))
+				b.P()
+
+				b.P("// Encode length")
+				b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_uint64(len);", fieldNameLength))
+				b.P()
+
+				b.P("// Allocate enough bytes for len up-to-10-byte varints")
+				b.P("bytes memory temp = new bytes(len * 10);")
+				b.P("uint64 tempLength = 0;")
+				b.P("for (uint64 i = 0; i < len; i++) {")
+				b.Indent()
+
+				b.P("// Encode each element in the array and append it to temp")
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+					b.P(fmt.Sprintf("bytes memory tempElement = ProtobufLib.encode_int32(int32(instance.%s[i]));", fieldName))
+				default:
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
+					b.P(fmt.Sprintf("bytes memory tempElement = ProtobufLib.encode_%s(instance.%s[i]);", fieldDecodeType, fieldName))
+				}
+				b.P("for (uint64 j = 0; j < tempElement.length; j++) {")
+				b.Indent()
+				b.P("temp[tempLength++] = tempElement[j];")
+				b.Unindent()
+				b.P("}")
+
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P("// Allocate just enough bytes and copy temp bytes over")
+				b.P("bytes memory encodedBytes = new bytes(tempLength);")
+				b.P("for (uint64 i = 0; i < temp.length; i++) {")
+				b.Indent()
+				b.P("encodedBytes[i] = temp[i];")
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("encodedInstance.%s = encodedBytes;", fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P()
+			} else {
+				// Non-repeated non-message (numeric, or string/bytes)
+
+				b.P(fmt.Sprintf("// Omit encoding %s if default value", fieldName))
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					b.P(fmt.Sprintf("if (bytes(instance.%s).length > 0) {", fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+					b.P(fmt.Sprintf("if (bool(instance.%s) != false) {", fieldName))
+				default:
+					b.P(fmt.Sprintf("if (uint64(instance.%s) != 0) {", fieldName))
+				}
+				b.Indent()
+
+				b.P(fmt.Sprintf("// Encode key for %s", fieldName))
+				wireStr, err := toSolWireType(field)
+				if err != nil {
+					return err
+				}
+				b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_key(%d, uint64(%s));", fieldNameKey, fieldNumber, wireStr))
+
+				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				switch fieldDescriptorType {
+				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
+					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
+					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_uint64(uint64(bytes(instance.%s).length));", fieldNameLength, fieldName))
+					b.P(fmt.Sprintf("encodedInstance.%s = bytes(instance.%s);", fieldName, fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
+					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_int32(int32(instance.%s));", fieldName, fieldName))
+				default:
+					fieldDecodeType, err := typeToDecodeSol(fieldDescriptorType)
+					if err != nil {
+						return errors.New(err.Error() + ": " + structName + "." + fieldName)
+					}
+					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_%s(instance.%s);", fieldName, fieldDecodeType, fieldName))
+				}
+
+				b.Unindent()
+				b.P("}")
+				b.P()
+			}
+		}
+	}
+
+	// We can't use abi.encodePacked here because of EVM stack limits
+	b.P("bytes memory finalEncoded;")
+	b.P("index = 0;")
+	b.P("len = 0;")
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Message type
+			b.P(fmt.Sprintf("len += uint64(encodedInstance.%s__Encoded.length);", fieldName))
+		default:
+			// Non-message type
+			b.P(fmt.Sprintf("len += uint64(encodedInstance.%s.length);", fieldName))
+		}
+	}
+	b.P("finalEncoded = new bytes(len);")
+	b.P()
+
+	b.P("uint64 j;")
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Message type
+			b.P("j = 0;")
+			b.P(fmt.Sprintf("while (j < encodedInstance.%s__Encoded.length) {", fieldName))
+			b.Indent()
+			b.P(fmt.Sprintf("finalEncoded[index++] = encodedInstance.%s__Encoded[j];", fieldName))
+			b.Unindent()
+			b.P("}")
+		default:
+			// Non-message type
+			b.P("j = 0;")
+			b.P(fmt.Sprintf("while (j < encodedInstance.%s.length) {", fieldName))
+			b.Indent()
+			b.P(fmt.Sprintf("finalEncoded[index++] = encodedInstance.%s[j];", fieldName))
+			b.Unindent()
+			b.P("}")
+		}
+	}
+	b.P()
+
+	b.P("return finalEncoded;")
 	b.Unindent()
 	b.P("}")
+	b.P()
 
+	////////////////////////////////////
+	// Generate encoder for nested message
+	////////////////////////////////////
+
+	b.P(fmt.Sprintf("// Encode a nested %s, wrapped in key and length if non-default", structName))
+	b.P(fmt.Sprintf("function encodeNested(uint64 field_number, %s memory instance) internal pure returns (%s memory) {", structName, structNameEncodedNested))
+	b.Indent()
+
+	b.P(fmt.Sprintf("%s memory wrapped;", structNameEncodedNested))
+	b.P()
+
+	b.P("wrapped.nestedInstance = encode(instance);")
+	b.P()
+
+	b.P("uint64 len = uint64(wrapped.nestedInstance.length);")
+	b.P("if (len > 0) {")
+	b.Indent()
+	b.P("wrapped.key = ProtobufLib.encode_key(field_number, 2);")
+	b.P("wrapped.length = ProtobufLib.encode_uint64(len);")
+	b.Unindent()
+	b.P("}")
+	b.P()
+
+	b.P("return wrapped;")
 	b.Unindent()
 	b.P("}")
 	b.P()

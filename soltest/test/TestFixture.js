@@ -185,4 +185,6 @@ contract("TestFixture", async (accounts) => {
       });
     });
   });
+
+  describe("encode", async () => {});
 });
