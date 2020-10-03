@@ -1077,6 +1077,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 	b.P(fmt.Sprintf("%s memory encodedInstance;", structNameEncoded))
 	b.P("uint64 len;")
+	b.P("uint64 index;")
 	b.P()
 
 	// Loop over fields
@@ -1104,10 +1105,38 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
 
 				b.P(fmt.Sprintf("// Encode %s", fieldName))
+				b.P("len = 0;")
 				b.P(fmt.Sprintf("encodedInstance.%s = new %sCodec.%s[](instance.%s.length);", fieldName, fieldTypeName, fieldTypeNameEncodedNested, fieldName))
 				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
 				b.Indent()
 				b.P(fmt.Sprintf("encodedInstance.%s[i] = %sCodec.encodeNested(%d, instance.%s[i]);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.P(fmt.Sprintf("len += uint64(encodedInstance.%s[i].key.length + encodedInstance.%s[i].length.length + encodedInstance.%s[i].nestedInstance.length);", fieldName, fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P()
+
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded = new bytes(len);", fieldName))
+				b.P("index = 0;")
+				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
+				b.Indent()
+				b.P("uint64 j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].key.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].key[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P("j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].length.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].length[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
+				b.P("j = 0;")
+				b.P(fmt.Sprintf("while (j < encodedInstance.%s[i].nestedInstance.length) {", fieldName))
+				b.Indent()
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded[index++] = encodedInstance.%s[i].nestedInstance[j];", fieldName, fieldName))
+				b.Unindent()
+				b.P("}")
 				b.Unindent()
 				b.P("}")
 				b.P()
@@ -1116,6 +1145,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 				b.P(fmt.Sprintf("// Encode %s", fieldName))
 				b.P(fmt.Sprintf("encodedInstance.%s = %sCodec.encodeNested(%d, instance.%s);", fieldName, fieldTypeName, fieldNumber, fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s__Encoded = abi.encodePacked(encodedInstance.%s.key, encodedInstance.%s.length, encodedInstance.%s.nestedInstance);", fieldName, fieldName, fieldName, fieldName))
 				b.P()
 			}
 		default:
