@@ -1031,7 +1031,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				arrayStr = "[]"
 			}
 
-			b.P(fmt.Sprintf("%s%s %s;", fieldTypeNameEncodedNested, arrayStr, fieldName))
+			b.P(fmt.Sprintf("%sCodec.%s%s %s;", fieldTypeName, fieldTypeNameEncodedNested, arrayStr, fieldName))
 		default:
 			// Add a field for the key
 			fieldNameKey := fieldName + "__Key"
@@ -1059,7 +1059,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 	b.P("bytes key;")
 	b.P("bytes length;")
-	b.P(fmt.Sprintf("%s nestedInstance;", structNameEncoded))
+	b.P("bytes nestedInstance;")
 
 	b.Unindent()
 	b.P("}")
@@ -1101,7 +1101,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				fieldTypeNameEncodedNested := fieldTypeName + "__Encoded__Nested"
 
 				b.P(fmt.Sprintf("// Encode %s", fieldName))
-				b.P(fmt.Sprintf("encodedInstance.%s = new %s(instance.%s.length);", fieldName, fieldTypeNameEncodedNested, fieldName))
+				b.P(fmt.Sprintf("encodedInstance.%s = new %sCodec.%s[](instance.%s.length);", fieldName, fieldTypeName, fieldTypeNameEncodedNested, fieldName))
 				b.P(fmt.Sprintf("for (uint64 i = 0; i < instance.%s.length; i++) {", fieldName))
 				b.Indent()
 				b.P(fmt.Sprintf("encodedInstance.%s[i] = %sCodec.encodeNested(%d, instance.%s[i]);", fieldName, fieldTypeName, fieldNumber, fieldName))
@@ -1161,7 +1161,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 					}
 					b.P(fmt.Sprintf("bytes memory tempElement = ProtobufLib.encode_%s(instance.%s[i]);", fieldDecodeType, fieldName))
 				}
-				b.P("for (uint64 j = 0; j < tempElement; j++) {")
+				b.P("for (uint64 j = 0; j < tempElement.length; j++) {")
 				b.Indent()
 				b.P("temp[tempLength++] = tempElement[j];")
 				b.Unindent()
@@ -1173,7 +1173,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 
 				b.P("// Allocate just enough bytes and copy temp bytes over")
 				b.P("bytes memory encodedBytes = new bytes(tempLength);")
-				b.P("for (uint64 i = 0; i < encoded.length; i++) {")
+				b.P("for (uint64 i = 0; i < temp.length; i++) {")
 				b.Indent()
 				b.P("encodedBytes[i] = temp[i];")
 				b.Unindent()
@@ -1192,6 +1192,8 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
 					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
 					b.P(fmt.Sprintf("if (bytes(instance.%s).length > 0) {", fieldName))
+				case descriptorpb.FieldDescriptorProto_TYPE_BOOL:
+					b.P(fmt.Sprintf("if (bool(instance.%s) != false) {", fieldName))
 				default:
 					b.P(fmt.Sprintf("if (uint64(instance.%s) != 0) {", fieldName))
 				}
@@ -1208,7 +1210,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 				switch fieldDescriptorType {
 				case descriptorpb.FieldDescriptorProto_TYPE_STRING,
 					descriptorpb.FieldDescriptorProto_TYPE_BYTES:
-					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_uint64(bytes(instance.%s).length);", fieldNameLength, fieldName))
+					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_uint64(uint64(bytes(instance.%s).length));", fieldNameLength, fieldName))
 					b.P(fmt.Sprintf("encodedInstance.%s = bytes(instance.%s);", fieldName, fieldName))
 				case descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 					b.P(fmt.Sprintf("encodedInstance.%s = ProtobufLib.encode_int32(int32(instance.%s));", fieldName, fieldName))
@@ -1247,7 +1249,7 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 	b.P("wrapped.nestedInstance = encode(instance);")
 	b.P()
 
-	b.P("uint64 len = abi.encodePacked(wrapped.nestedInstance).length;")
+	b.P("uint64 len = uint64(wrapped.nestedInstance.length);")
 	b.P("if (len > 0) {")
 	b.Indent()
 	b.P("wrapped.key = ProtobufLib.encode_key(field_number, 2);")
