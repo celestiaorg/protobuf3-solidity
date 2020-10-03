@@ -1032,6 +1032,9 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 			}
 
 			b.P(fmt.Sprintf("%sCodec.%s%s %s;", fieldTypeName, fieldTypeNameEncodedNested, arrayStr, fieldName))
+
+			// Add a field for encoded version of nested message
+			b.P(fmt.Sprintf("bytes %s__Encoded;", fieldName))
 		default:
 			// Add a field for the key
 			fieldNameKey := fieldName + "__Key"
@@ -1229,7 +1232,28 @@ func (g *Generator) generateMessageEncoder(structName string, fields []*descript
 		}
 	}
 
-	b.P("return abi.encodePacked(encodedInstance);")
+	b.P("return abi.encodePacked(")
+	b.Indent()
+	for _, field := range fields {
+		fieldDescriptorType := field.GetType()
+		fieldName := field.GetName()
+		err := checkKeyword(fieldName)
+		if err != nil {
+			return err
+		}
+
+		switch fieldDescriptorType {
+		case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE:
+			// Message type
+			b.P(fmt.Sprintf("encodedInstance.%s__Encoded,", fieldName))
+		default:
+			// Non-message type
+			b.P(fmt.Sprintf("encodedInstance.%s,", fieldName))
+		}
+	}
+	b.P("new bytes(0)")
+	b.Unindent()
+	b.P(");")
 
 	b.Unindent()
 	b.P("}")
