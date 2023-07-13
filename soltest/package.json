@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/lazyledger/protobuf3-solidity#readme",
   "dependencies": {
-    "@lazyledger/protobuf3-solidity-lib": "^0.5.1"
+    "@lazyledger/protobuf3-solidity-lib": "^0.6.0"
   },
   "devDependencies": {
     "eslint": "^7.8.1",
