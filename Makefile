@@ -18,7 +18,7 @@ build: $(TARGETS)
 
 $(TARGETS):
 	mkdir -p $(BIN_DIR)
-	$(GOBUILD) -v $(LDFLAGS) -o $(BIN_DIR)/ ./cmd/$@
+	$(GOBUILD) -v $(LDFLAGS) -o $(BIN_DIR)/$@ ./cmd/$@
 
 test-go: $(TARGETS)
 	$(GOTEST) -mod=readonly ./...
@@ -29,7 +29,15 @@ test-protoc-check:
 	$(PROTOC) --version > /dev/null
 
 $(TESTS_PASSING): build
-	$(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0,generate=decoder:$@ -I $@ $@/*.proto;
+	@if $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out license=Apache-2.0,generate=decoder:$@ -I $@ $@/*.proto; then \
+		echo "PASS: $@"; \
+	else \
+		echo "FAIL: $@"; \
+	fi
 
 $(TESTS_FAILING): build
-	! $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out $@ -I $@ $@/*.proto;
+	@if ! $(PROTOC) --plugin $(BIN_DIR)/$(TARGET_GEN_SOL) --sol_out $@ -I $@ $@/*.proto; then \
+		echo "PASS (expected to fail): $@"; \
+	else \
+		echo "FAIL (unexpected success): $@"; \
+	fi
